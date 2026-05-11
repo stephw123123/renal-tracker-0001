@@ -55,25 +55,26 @@
         <button class="btn-notify" onclick="setupNotifications()">開啟提醒功能</button>
     </div>
 
-    <div class="card" style="border: 2px solid #3498db;">
-        <h2 style="border:none;">📍 我現在在哪裡？</h2>
-        <select id="userLocation" onchange="toggleLocDetail()">
-            <option value="屋企 (在客廳)">屋企 (在客廳)</option>
-            <option value="屋企 (在床上)">屋企 (在床上)</option>
-            <option value="街上/商場">街上/商場</option>
-            <option value="醫院">醫院</option>
-            <option value="其他">其他</option>
-        </select>
-        <input type="text" id="locDetail" placeholder="註明地點..." style="display:none;">
-    </div>
-
     <div class="tabs">
         <button class="tab-btn active" onclick="showTab('tracker', this)">今日記錄</button>
         <button class="tab-btn" onclick="showTab('history', this)">歷史詳情</button>
         <button class="tab-btn" onclick="showTab('calendarTab', this)">回顧月曆</button>
     </div>
 
+    <!-- 1. Today's Record Tab (Includes Location) -->
     <div id="tracker" class="tab-content active">
+        <div class="card" style="border: 2px solid #3498db;">
+            <h2 style="border:none;">📍 我現在在哪裡？</h2>
+            <select id="userLocation" onchange="toggleLocDetail()">
+                <option value="屋企 (在客廳)">屋企 (在客廳)</option>
+                <option value="屋企 (在床上)">屋企 (在床上)</option>
+                <option value="街上/商場">街上/商場</option>
+                <option value="醫院">醫院</option>
+                <option value="其他">其他</option>
+            </select>
+            <input type="text" id="locDetail" placeholder="註明地點..." style="display:none;">
+        </div>
+
         <div class="card food-section">
             <h2>🥗 自動飲食分析</h2>
             <input type="text" id="foodName" placeholder="輸入食物">
@@ -96,7 +97,7 @@
             <h2>💧 飲水進度 (<span id="curTotal">0</span>/800mL)</h2>
             <div class="progress-container"><div id="progressBar"></div></div>
             <div style="display:flex; gap:5px;">
-                <input type="number" id="fluidAmt" placeholder="mL" style="width:120px;">
+                <input type="number" id="fluidAmt" placeholder="mL" style="width:150px;">
                 <select id="fluidType" style="flex-grow:1;"><option value="水">水</option><option value="其他">其他</option></select>
             </div>
             <button onclick="addFluid()" style="background:#1976d2;">新增記錄</button>
@@ -104,11 +105,13 @@
         </div>
     </div>
 
+    <!-- 2. History Details Tab -->
     <div id="history" class="tab-content">
         <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
         <div class="card" style="padding:10px;"><table id="historyTable"><thead><tr><th style="width:35%">日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead><tbody id="historyBody"></tbody></table></div>
     </div>
 
+    <!-- 3. Calendar Tab -->
     <div id="calendarTab" class="tab-content">
         <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
         <div id="multiMonthCalendarContainer"></div>
@@ -215,7 +218,7 @@
             for(let i=0; i<first; i++) g.innerHTML += `<div class="cal-day" style="background:#f9f9f9"></div>`;
             for(let d=1; d<=tot; d++) {
                 const s = calculateDayScore(`${y}/${m+1}/${d}`);
-                g.innerHTML += `<div class="cal-day"><div style="font-weight:bold">${d}</div>${s.hasData?`<div class="cal-dot" style="background:${s.color}"></div><div class="cal-note">${s.score===3?'完成晒!':s.reasons.join('<br>')}</div>`:''}</div>`;
+                g.innerHTML += `<div class="cal-day"><div style="font-weight:bold">${d}</div>${s.hasData?`<div class="cal-dot" style="background:${s.color}"></div><div class="cal-note">${s.score===3?'做得好!':s.reasons.join('<br>')}</div>`:''}</div>`;
             }
             c.appendChild(g);
         });

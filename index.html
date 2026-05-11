@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>腎臟健康追蹤日誌</title>
+    <title>健康追蹤日誌</title>
     <style>
         body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; padding: 15px; line-height: 1.6; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; }
-        .input-group { margin: 15px 0; }
         button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; font-size: 16px; margin-top: 5px; }
         .warning { color: white; background: #e74c3c; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
         .caution { color: #856404; background: #fff3cd; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; border: 1px solid #ffeeba; }
@@ -20,9 +19,9 @@
 
 <div id="pinOverlay">
     <div class="card" style="width: 280px; text-align: center;">
-        <h3>請輸入 PIN 碼</h3>
-        <input type="password" id="pinInput" maxlength="4" placeholder="預設 1234">
-        <button onclick="handleUnlock()">解鎖</button>
+        <h3>請輸入你的 PIN 碼</h3>
+        <input type="password" id="pinInput" maxlength="4" placeholder="輸入 4 位數" inputmode="numeric">
+        <p style="color: #666; font-size: 12px; margin-top: 10px;">輸入完畢將自動解鎖</p>
     </div>
 </div>
 
@@ -37,15 +36,16 @@
             <label><input type="checkbox" id="m20"> 08:00 PM</label>
             <label><input type="checkbox" id="m22"> 10:00 PM</label>
         </div>
-        <button onclick="alert('藥物紀錄已儲存')" style="background:#27ae60;">儲存進度</button>
+        <button onclick="saveMeds()" style="background:#27ae60; margin-top:15px;">儲存紀錄</button>
     </div>
 
     <div class="card">
         <h2>💧 飲水 (上限 800mL)</h2>
         <input type="number" id="fluidAmt" placeholder="輸入毫升 (mL)">
         <button onclick="addFluid()">新增飲水</button>
+        <button onclick="resetFluid()" style="background:#95a5a6; margin-top:10px; font-size:14px;">重置今日飲水</button>
         <p>今日累計: <strong id="totalFluid">0</strong> / 800 mL</p>
-        <div id="fluidWarn" class="warning">⚠️ 注意：您已超過每日 800mL 限制！</div>
+        <div id="fluidWarn" class="warning">⚠️ 注意：您已超過每日的 800mL 限制！</div>
     </div>
 
     <div class="card">
@@ -64,35 +64,68 @@
 </div>
 
 <script>
+    const pinInput = document.getElementById('pinInput');
+
+    // Auto-unlock logic
+    pinInput.addEventListener('input', () => {
+        if (pinInput.value.length === 4) {
+            handleUnlock();
+        }
+    });
+
     function handleUnlock() {
-        const pin = document.getElementById('pinInput').value;
-        if (pin === '1234') {
+        if (pinInput.value === '1234') {
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             updateUI();
         } else {
             alert('PIN 錯誤');
+            pinInput.value = '';
         }
     }
 
     function addFluid() {
         let val = parseInt(document.getElementById('fluidAmt').value) || 0;
         let total = parseInt(localStorage.getItem('fluid_total') || 0);
-        total += val;
-        localStorage.setItem('fluid_total', total);
+        localStorage.setItem('fluid_total', total + val);
         document.getElementById('fluidAmt').value = '';
         updateUI();
+    }
+
+    function resetFluid() {
+        if(confirm('確定要重置今日飲水量嗎？')) {
+            localStorage.setItem('fluid_total', 0);
+            updateUI();
+        }
+    }
+
+    function saveMeds() {
+        const meds = {
+            m8: document.getElementById('m8').checked,
+            m12: document.getElementById('m12').checked,
+            m20: document.getElementById('m20').checked,
+            m22: document.getElementById('m22').checked
+        };
+        localStorage.setItem('med_records', JSON.stringify(meds));
+        alert('藥物紀錄已儲存');
     }
 
     function checkDiet() {
         const level = document.getElementById('phosLevel').value;
         document.getElementById('dietWarn').style.display = (level === 'high') ? 'block' : 'none';
+        if(level !== 'high') alert('已記錄飲食');
     }
 
     function updateUI() {
         const total = localStorage.getItem('fluid_total') || 0;
         document.getElementById('totalFluid').innerText = total;
         document.getElementById('fluidWarn').style.display = (total > 800) ? 'block' : 'none';
+        
+        const meds = JSON.parse(localStorage.getItem('med_records') || '{}');
+        if(meds.m8) document.getElementById('m8').checked = true;
+        if(meds.m12) document.getElementById('m12').checked = true;
+        if(meds.m20) document.getElementById('m20').checked = true;
+        if(meds.m22) document.getElementById('m22').checked = true;
     }
 </script>
 </body>

@@ -234,9 +234,9 @@
             const y = new Date(); y.setDate(y.getDate()-1);
             const s = calculateDayScore(y.toLocaleDateString());
             const div = document.getElementById('yesterdaySummary');
-            if(!s.hasData) div.innerHTML = "今天是新的一天，加油填寫你的紀錄！💪";
+            if(!s.hasData) div.innerHTML = "今天是新的一天！💪";
             else if(s.score === 3) div.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
-            else div.innerHTML = `昨天你沒有拿到所有的 ✅！注意：${s.reasons.join('、')}。加油！💪`;
+            else div.innerHTML = `昨天你沒有拿到所有的 ✅！注意：${s.reasons.join('、')}。繼續加油！💪`;
         }
     });
 

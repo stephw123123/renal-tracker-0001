@@ -3,128 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>腎臟健康日誌</title>
+    <title>腎臟健康日誌 - 進階版</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; padding: 15px; margin: 0; }
-        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; font-size: 1.2rem; }
+        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; padding: 15px; margin: 0; color: #2c3e50; }
+        .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h2 { border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; font-size: 1.1rem; }
         
-        /* Navigation Tabs */
-        .tabs { display: flex; background: #fff; border-radius: 12px; margin-bottom: 15px; overflow: hidden; border: 1px solid #ddd; }
-        .tab-btn { flex: 1; padding: 15px; text-align: center; cursor: pointer; background: #f8f9fa; border: none; font-weight: bold; color: #666; }
+        /* Tabs */
+        .tabs { display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Inputs & Buttons */
-        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
-        button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; font-size: 16px; font-weight: bold; }
-        
-        /* Alerts */
-        .warning { color: white; background: #e74c3c; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; text-align: center; }
-        .caution { color: #856404; background: #fff3cd; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; border: 1px solid #ffeeba; }
-        
-        /* PIN Overlay */
-        #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        /* Progress Bar */
+        .progress-container { background: #eee; border-radius: 20px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden; }
+        #progressBar { background: #3498db; height: 100%; width: 0%; transition: width 0.5s ease; }
+        .limit-reached { background-color: #e74c3c !important; }
+
+        /* Entry Items */
+        .entry-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ccc; font-size: 0.9rem; }
+        button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         
         /* History Table */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
+        .tick { color: #27ae60; font-weight: bold; font-size: 1.2rem; }
+        .cross { color: #e74c3c; }
+
+        #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
     </style>
 </head>
 <body>
 
 <div id="pinOverlay">
     <div class="card" style="width: 280px; text-align: center;">
-        <h3 id="displayPatientName">歡迎回來</h3>
-        <p>請輸入 PIN 碼解鎖</p>
-        <input type="password" id="pinInput" maxlength="4" placeholder="****" inputmode="numeric">
+        <h3>解鎖日誌</h3>
+        <input type="password" id="pinInput" maxlength="4" placeholder="PIN" inputmode="numeric" style="text-align:center; font-size: 20px; width: 80%; padding: 10px;">
     </div>
 </div>
 
 <div id="mainApp" style="display:none;">
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('tracker', this)">今日記錄</button>
-        <button class="tab-btn" onclick="switchTab('history', this)">歷史清單</button>
+        <button class="tab-btn active" onclick="showTab('tracker', this)">今日記錄</button>
+        <button class="tab-btn" onclick="showTab('history', this)">歷史回顧</button>
     </div>
 
     <div id="tracker" class="tab-content active">
         <div class="card">
+            <h2>💧 飲水進度 (<span id="curTotal">0</span>/800mL)</h2>
+            <div class="progress-container"><div id="progressBar"></div></div>
+            <div style="display:flex; gap:5px;">
+                <input type="number" id="fluidAmt" placeholder="mL" style="width:70px; padding:10px;">
+                <select id="fluidType" style="flex-grow:1; padding:10px;">
+                    <option value="水">水</option>
+                    <option value="湯">湯</option>
+                    <option value="茶/咖啡">茶/咖啡</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <button onclick="addFluid()">新增記錄</button>
+            <div id="dailyEntries" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="card">
+            <h2>🥗 飲食磷含量</h2>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="foodName" placeholder="食物名稱" style="flex-grow:1; padding:10px;">
+                <select id="phosLevel" style="padding:10px;">
+                    <option value="low">低 ✅</option>
+                    <option value="high">高 ❌</option>
+                </select>
+            </div>
+            <button onclick="addFood()" style="background:#f39c12;">紀錄飲食</button>
+        </div>
+
+        <div class="card">
             <h2>💊 藥物紀錄</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                <label><input type="checkbox" id="m8"> 08:00 AM</label>
-                <label><input type="checkbox" id="m12"> 12:00 PM</label>
-                <label><input type="checkbox" id="m20"> 08:00 PM</label>
-                <label><input type="checkbox" id="m22"> 10:00 PM</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <label><input type="checkbox" id="m8"> 08:00</label>
+                <label><input type="checkbox" id="m12"> 12:00</label>
+                <label><input type="checkbox" id="m20"> 20:00</label>
+                <label><input type="checkbox" id="m22"> 22:00</label>
             </div>
             <button onclick="saveMeds()" style="background:#27ae60;">儲存藥物狀態</button>
-        </div>
-
-        <div class="card">
-            <h2>💧 飲水追蹤</h2>
-            <input type="number" id="fluidAmt" placeholder="輸入毫升 (mL)">
-            <button onclick="addFluid()">確認新增</button>
-            <p style="text-align: center; font-size: 1.1rem; margin-top: 15px;">
-                今日累計: <strong id="totalFluid">0</strong> / <span id="limitDisplay">800</span> mL
-            </p>
-            <div id="fluidWarn" class="warning">⚠️ 您已超過每日飲水限制！</div>
-        </div>
-
-        <div class="card">
-            <h2>🥗 飲食追蹤</h2>
-            <input type="text" id="foodName" placeholder="食物內容">
-            <select id="phosLevel">
-                <option value="low">低磷 ✅</option>
-                <option value="med">中磷 ⚠️</option>
-                <option value="high">高磷 ❌</option>
-            </select>
-            <button onclick="addFood()" style="background:#f39c12;">紀錄飲食</button>
-            <div id="dietWarn" class="caution">提示：高磷食物可能導致不適，請留意。</div>
         </div>
     </div>
 
     <div id="history" class="tab-content">
         <div class="card">
-            <h2>📋 歷史記錄</h2>
+            <h2>📋 每日表現回顧</h2>
             <table id="historyTable">
-                <thead><tr><th>時間</th><th>項目</th><th>詳情</th></tr></thead>
+                <thead><tr><th>日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead>
                 <tbody id="historyBody"></tbody>
             </table>
-            <button onclick="confirmClear()" style="background:#95a5a6; margin-top:20px; font-size: 12px;">重置所有數據</button>
+            <p style="font-size:0.8rem; color:#666; margin-top:15px;">* 飲水需介於 700-800mL 即可獲得 ✅</p>
         </div>
     </div>
 
-    <button onclick="location.reload()" style="background:#34495e; margin-bottom: 40px;">安全鎖定</button>
+    <button onclick="location.reload()" style="background:#34495e; margin-top:20px;">安全鎖定</button>
 </div>
 
 <script>
-    /* ==========================================
-       CLINICIAN SETTINGS (Change these for each patient)
-       ========================================== */
-    const CONFIG = {
-        PATIENT_PIN: "1234",
-        FLUID_LIMIT: 800,
-        PATIENT_ID: "P001" // Anonymized ID
-    };
-
-    // Initialize UI with settings
-    document.getElementById('limitDisplay').innerText = CONFIG.FLUID_LIMIT;
-    document.getElementById('displayPatientName').innerText = "患者 " + CONFIG.PATIENT_ID;
-
-    // PIN Logic
     const pinInput = document.getElementById('pinInput');
-    pinInput.addEventListener('input', () => {
-        if (pinInput.value === CONFIG.PATIENT_PIN) {
-            document.getElementById('pinOverlay').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            updateUI();
-        } else if (pinInput.value.length >= 4) {
-            alert("PIN 錯誤");
-            pinInput.value = "";
-        }
-    });
+    pinInput.addEventListener('input', () => { if (pinInput.value === '1234') { document.getElementById('pinOverlay').style.display='none'; document.getElementById('mainApp').style.display='block'; updateUI(); } });
 
-    function switchTab(tabId, btn) {
+    function showTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
@@ -132,65 +116,72 @@
         if(tabId === 'history') renderHistory();
     }
 
+    function getToday() { return new Date().toLocaleDateString(); }
+
     function addFluid() {
-        const val = parseInt(document.getElementById('fluidAmt').value) || 0;
-        if(val <= 0) return;
-        let total = parseInt(localStorage.getItem('f_total') || 0);
-        localStorage.setItem('f_total', total + val);
-        logHistory('飲水', val + ' mL');
+        const amt = parseInt(document.getElementById('fluidAmt').value);
+        if (!amt || amt <= 0) return;
+        const entry = { date: getToday(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), amt, type: document.getElementById('fluidType').value };
+        const data = JSON.parse(localStorage.getItem('fluid_logs') || '[]');
+        data.unshift(entry);
+        localStorage.setItem('fluid_logs', JSON.stringify(data));
         document.getElementById('fluidAmt').value = '';
         updateUI();
     }
 
     function addFood() {
-        const name = document.getElementById('foodName').value || "未命名";
+        const name = document.getElementById('foodName').value || "食物";
         const level = document.getElementById('phosLevel').value;
-        const levelText = level === 'high' ? '高磷' : (level === 'med' ? '中磷' : '低磷');
-        logHistory('食物', `${name} (${levelText})`);
-        document.getElementById('dietWarn').style.display = (level === 'high') ? 'block' : 'none';
+        const entry = { date: getToday(), name, level };
+        const data = JSON.parse(localStorage.getItem('diet_logs') || '[]');
+        data.unshift(entry);
+        localStorage.setItem('diet_logs', JSON.stringify(data));
         document.getElementById('foodName').value = '';
         alert("已紀錄");
     }
 
-    function logHistory(type, detail) {
-        const hist = JSON.parse(localStorage.getItem('h_list') || '[]');
-        const now = new Date();
-        const ts = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
-        hist.unshift({ ts, type, detail });
-        localStorage.setItem('h_list', JSON.stringify(hist));
-    }
-
-    function renderHistory() {
-        const hist = JSON.parse(localStorage.getItem('h_list') || '[]');
-        document.getElementById('historyBody').innerHTML = hist.map(i => 
-            `<tr><td>${i.ts}</td><td>${i.type}</td><td>${i.detail}</td></tr>`
-        ).join('');
-    }
-
     function saveMeds() {
-        const meds = {
-            m8: document.getElementById('m8').checked,
-            m12: document.getElementById('m12').checked,
-            m20: document.getElementById('m20').checked,
-            m22: document.getElementById('m22').checked
-        };
-        localStorage.setItem('m_status', JSON.stringify(meds));
-        alert("紀錄成功");
-    }
-
-    function confirmClear() {
-        if(confirm("確定要刪除所有歷史記錄嗎？")) {
-            localStorage.clear();
-            location.reload();
-        }
+        const meds = { m8: document.getElementById('m8').checked, m12: document.getElementById('m12').checked, m20: document.getElementById('m20').checked, m22: document.getElementById('m22').checked };
+        const allMeds = JSON.parse(localStorage.getItem('med_logs') || '{}');
+        allMeds[getToday()] = meds;
+        localStorage.setItem('med_logs', JSON.stringify(allMeds));
+        alert("藥物紀錄已儲存");
     }
 
     function updateUI() {
-        const total = parseInt(localStorage.getItem('f_total') || 0);
-        document.getElementById('totalFluid').innerText = total;
-        document.getElementById('fluidWarn').style.display = (total > CONFIG.FLUID_LIMIT) ? 'block' : 'none';
-        const meds = JSON.parse(localStorage.getItem('m_status') || '{}');
+        const logs = JSON.parse(localStorage.getItem('fluid_logs') || '[]');
+        const todayLogs = logs.filter(l => l.date === getToday());
+        const total = todayLogs.reduce((s, l) => s + l.amt, 0);
+        document.getElementById('curTotal').innerText = total;
+        const bar = document.getElementById('progressBar');
+        bar.style.width = Math.min((total/800)*100, 100) + '%';
+        bar.className = total > 800 ? 'limit-reached' : '';
+        
+        document.getElementById('dailyEntries').innerHTML = todayLogs.map(l => `<div class="entry-item"><span>${l.time} ${l.type}</span><strong>${l.amt}mL</strong></div>`).join('');
+        
+        const meds = JSON.parse(localStorage.getItem('med_logs') || '{}')[getToday()] || {};
         ['m8', 'm12', 'm20', 'm22'].forEach(id => document.getElementById(id).checked = meds[id] || false);
+    }
+
+    function renderHistory() {
+        const fluidLogs = JSON.parse(localStorage.getItem('fluid_logs') || '[]');
+        const dietLogs = JSON.parse(localStorage.getItem('diet_logs') || '[]');
+        const medLogs = JSON.parse(localStorage.getItem('med_logs') || '{}');
+        
+        const dates = [...new Set([...fluidLogs.map(l=>l.date), ...dietLogs.map(l=>l.date), ...Object.keys(medLogs)])].sort().reverse();
+        
+        document.getElementById('historyBody').innerHTML = dates.map(d => {
+            const dayFluid = fluidLogs.filter(l => l.date === d).reduce((s, l) => s + l.amt, 0);
+            const fluidTick = (dayFluid >= 700 && dayFluid <= 800) ? '✅' : '❌';
+            
+            const dayDiet = dietLogs.filter(l => l.date === d);
+            const dietTick = (dayDiet.length > 0 && !dayDiet.some(l => l.level === 'high')) ? '✅' : '❌';
+            
+            const m = medLogs[d] || {};
+            const medTick = (m.m8 && m.m12 && m.m20 && m.m22) ? '✅' : '❌';
+            
+            return `<tr><td>${d.split('/')[1]}/${d.split('/')[2]}</td><td>${medTick}</td><td>${fluidTick}</td><td>${dietTick}</td></tr>`;
+        }).join('');
     }
 </script>
 </body>

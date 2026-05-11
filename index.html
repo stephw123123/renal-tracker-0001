@@ -17,19 +17,21 @@
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .notify-banner { background: #fffde7; border: 1px solid #fff59d; padding: 10px; border-radius: 10px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; }
-        .btn-notify { background: #fbc02d; color: #333; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
         button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
         .progress-container { background: #fff; border-radius: 20px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden; border: 1px solid #ddd; }
         #progressBar { background: #3498db; height: 100%; width: 0%; transition: width 0.5s ease; }
+        #progressBar.over-limit { background: #e74c3c !important; }
+        .fluid-warn-msg { color: #e74c3c; font-weight: bold; text-align: center; font-size: 0.9rem; margin-top: 5px; display: none; }
         .med-btn { background: white; color: #2c3e50; border: 2px solid #ddd; font-weight: normal; margin-bottom: 5px; font-size: 0.85rem; padding: 10px 5px; border-radius: 8px; }
         .med-btn.taken { background: #27ae60; color: white; border-color: #27ae60; }
         .entry-log-item { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.85rem; }
+        .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 8px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
         .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
         .cal-day { font-size: 0.9rem; padding: 5px 2px; border-radius: 4px; background: #fff; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; }
         .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; }
+        .cal-note { font-size: 0.55rem; color: #666; line-height: 1.1; text-align: center; }
         #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; font-size: 0.85rem; }
         th, td { padding: 10px 5px; border-bottom: 1px solid #eee; text-align: center; }
@@ -48,12 +50,7 @@
 
 <div id="mainApp" style="display:none;">
     <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
-    <div id="yesterdaySummary" class="summary-msg">分析中...</div>
-
-    <div class="notify-banner">
-        🔔 想在用藥時間收到提醒嗎？<br>
-        <button class="btn-notify" onclick="setupNotifications()">開啟提醒功能</button>
-    </div>
+    <div id="yesterdaySummary" class="summary-msg">正在分析昨日進度...</div>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="showTab('tracker', this)">今日記錄</button>
@@ -95,6 +92,7 @@
         <div class="card fluid-section">
             <h2>💧 飲水進度 (<span id="curTotal">0</span>/800mL)</h2>
             <div class="progress-container"><div id="progressBar"></div></div>
+            <div id="fluidLimitMsg" class="fluid-warn-msg">⚠️ 飲水量已超標，明天要多加注意喔！</div>
             <div style="display:flex; gap:5px;">
                 <input type="number" id="fluidAmt" placeholder="mL" style="width:150px;">
                 <select id="fluidType" style="flex-grow:1;"><option value="水">水</option><option value="其他">其他</option></select>
@@ -105,26 +103,40 @@
     </div>
 
     <div id="history" class="tab-content">
-        <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
+        <button onclick="window.print()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
         <div class="card" style="padding:10px;"><table id="historyTable"><thead><tr><th style="width:35%">日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead><tbody id="historyBody"></tbody></table></div>
     </div>
 
     <div id="calendarTab" class="tab-content">
-        <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
+        <button onclick="window.print()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
         <div id="multiMonthCalendarContainer"></div>
     </div>
 
-    <button onclick="location.reload()" style="background:#34495e; margin:20px 0 40px;">登出</button>
+    <button onclick="location.reload()" style="background:#34495e; margin-top:20px;">登出</button>
+    <button style="background: #95a5a6; font-size: 12px; margin-top: 10px; border-radius: 8px; color: white; border: none; padding: 8px; width: 100%; margin-bottom: 50px;" onclick="if(confirm('確定清除所有數據？')) { localStorage.clear(); location.reload(); }">重置所有數據 (開始新紀錄)</button>
 </div>
 
 <script>
     const CONFIG = { LIMIT: 800, PIN: "1234" };
     const MED_SLOTS = ['08:00 (早上)', '12:00 (中午)', '20:00 (晚上)', '22:00 (睡覺前)'];
+    const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "豆", "蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "可樂", "咖啡", "堅果", "罐頭"];
+    const HIGH_PRO_KEYWORDS = ["雞肉", "魚", "肉", "蝦", "蟹", "海鮮"];
 
-    // --- LOCKED DATE LOGIC ---
+    // Date Key Helper
     function getTodayKey() {
         const d = new Date();
         return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`;
+    }
+
+    function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
+    function getSelectedLocation() { const l = document.getElementById('userLocation').value; return l === '其他' ? `其他(${document.getElementById('locDetail').value})` : l; }
+
+    function getMedicalComment(food) {
+        let comments = [];
+        if (HIGH_PHOS_KEYWORDS.some(k => food.includes(k))) comments.push("⚠️ 注意：此食物含磷較高。過多的磷會導致皮膚瘙癢和骨骼問題！");
+        if (HIGH_PRO_KEYWORDS.some(k => food.includes(k))) comments.push("ℹ️ 提醒：這是一種高蛋白質食物。請確保攝取量符合營養師的建議！");
+        if (food.includes("加工") || food.includes("火腿") || food.includes("香腸")) comments.push("⛔ 警告：加工食品含有極易被吸收的無機磷，請盡量避免。");
+        return comments.length > 0 ? comments.join("<br>") : "✅ 良好的選擇，請繼續保持～";
     }
 
     function calculateDayScore(dateKey) {
@@ -144,22 +156,19 @@
         return { score, color, reasons, hasData, f, d, m, fSum, mOk, fOk, dOk };
     }
 
-    // Standard Actions
-    function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
-    function getSelectedLocation() { const l = document.getElementById('userLocation').value; return l === '其他' ? `其他(${document.getElementById('locDetail').value})` : l; }
+    function addFood() {
+        const n = document.getElementById('foodName').value; if(!n) return;
+        const c = getMedicalComment(n);
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: getSelectedLocation() };
+        let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
+        document.getElementById('foodName').value = ''; updateUI();
+    }
 
     function addFluid() {
         const a = parseInt(document.getElementById('fluidAmt').value); if(!a) return;
-        const e = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt: a, label: document.getElementById('fluidType').value, location: getSelectedLocation() };
-        let l = JSON.parse(localStorage.getItem('f_logs') || '[]'); l.unshift(e); localStorage.setItem('f_logs', JSON.stringify(l));
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt: a, label: document.getElementById('fluidType').value, location: getSelectedLocation() };
+        let l = JSON.parse(localStorage.getItem('f_logs') || '[]'); l.unshift(entry); localStorage.setItem('f_logs', JSON.stringify(l));
         document.getElementById('fluidAmt').value = ''; updateUI();
-    }
-
-    function addFood() {
-        const n = document.getElementById('foodName').value; if(!n) return;
-        const e = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, risk: false, location: getSelectedLocation() };
-        let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(e); localStorage.setItem('d_logs', JSON.stringify(l));
-        document.getElementById('foodName').value = ''; updateUI();
     }
 
     function toggleMed(slot) {
@@ -173,30 +182,34 @@
     function updateUI() {
         const s = calculateDayScore(getTodayKey());
         document.getElementById('curTotal').innerText = s.fSum;
-        document.getElementById('progressBar').style.width = Math.min((s.fSum/800)*100, 100) + '%';
+        const bar = document.getElementById('progressBar');
+        bar.style.width = Math.min((s.fSum/800)*100, 100) + '%';
+        if (s.fSum > 800) { bar.classList.add('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'block'; }
+        else { bar.classList.remove('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'none'; }
         const btns = document.getElementsByClassName('med-btn');
         MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x=>x.timeSlot===t) ? "med-btn taken" : "med-btn");
-        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'}</div>`).join('');
+        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
         document.getElementById('dailyFluidList').innerHTML = b(s.f); document.getElementById('dailyFoodList').innerHTML = b(s.d); document.getElementById('dailyMedList').innerHTML = b(s.m);
+    }
+
+    function showTab(id, btn) {
+        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); btn.classList.add('active');
+        if(id === 'calendarTab') renderMultiMonthCalendar();
+        if(id === 'history') renderHistoryTable();
     }
 
     function renderMultiMonthCalendar() {
         const c = document.getElementById('multiMonthCalendarContainer'); c.innerHTML = '';
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = now.getMonth(); // 4 for May
-
+        const now = new Date(); const y = now.getFullYear(); const m = now.getMonth();
         c.innerHTML += `<div class="cal-month-header">${y} 年 ${m + 1} 月</div>`;
         const g = document.createElement('div'); g.className = 'cal-grid';
         ["日","一","二","三","四","五","六"].forEach(w => g.innerHTML += `<div class="cal-day cal-header">${w}</div>`);
-        
-        const first = new Date(y, m, 1).getDay();
-        const total = new Date(y, m + 1, 0).getDate();
-
+        const first = new Date(y, m, 1).getDay(); const total = new Date(y, m + 1, 0).getDate();
         for(let i=0; i<first; i++) g.innerHTML += `<div class="cal-day" style="background:#f9f9f9"></div>`;
         for(let day=1; day<=total; day++) {
-            const dateKey = `${y}-${(m+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
-            const s = calculateDayScore(dateKey);
+            const dk = `${y}-${(m+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+            const s = calculateDayScore(dk);
             g.innerHTML += `<div class="cal-day"><div style="font-weight:bold">${day}</div>${s.hasData?`<div class="cal-dot" style="background:${s.color}"></div><div class="cal-note">${s.score===3?'完成晒!':s.reasons.join('<br>')}</div>`:''}</div>`;
         }
         c.appendChild(g);
@@ -213,30 +226,19 @@
         }).join('');
     }
 
-    // Navigation and Init
-    function showTab(id, btn) {
-        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); btn.classList.add('active');
-        if(id === 'calendarTab') renderMultiMonthCalendar();
-        if(id === 'history') renderHistoryTable();
-    }
-
     document.getElementById('pinInput').addEventListener('input', (e) => {
         if (e.target.value === CONFIG.PIN) {
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             updateUI(); 
             const yDate = new Date(); yDate.setDate(yDate.getDate()-1);
-            const yStr = `${yDate.getFullYear()}-${(yDate.getMonth()+1).toString().padStart(2,'0')}-${yDate.getDate().toString().padStart(2,'0')}`;
-            const s = calculateDayScore(yStr); const div = document.getElementById('yesterdaySummary');
+            const yKey = `${yDate.getFullYear()}-${(yDate.getMonth()+1).toString().padStart(2,'0')}-${yDate.getDate().toString().padStart(2,'0')}`;
+            const s = calculateDayScore(yKey); const div = document.getElementById('yesterdaySummary');
             if(!s.hasData) div.innerHTML = "今天是新的一天！💪";
             else if(s.score === 3) div.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
             else div.innerHTML = `昨天你沒有拿到所有的 ✅！注意：${s.reasons.join('、')}。繼續加油！💪`;
         }
     });
-
-    function setupNotifications() { Notification.requestPermission().then(p => { if(p === "granted") alert("已開啟！"); }); }
-    function exportToPDF() { window.print(); }
 </script>
 </body>
 </html>

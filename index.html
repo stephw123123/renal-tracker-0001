@@ -165,9 +165,9 @@
             summaryDiv.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
         } else {
             let feedback = "昨天你沒有拿到所有的 ✅！我們注意到：";
-            if (!yMedSuccess) feedback += " 藥物紀錄不齊全...";
-            if (yDietRisk) feedback += " 飲食含高磷風險！";
-            if (!fOk) feedback += ` 飲水量為 ${yFluid}mL...`;
+            if (!yMedSuccess) feedback += " 藥物紀錄不齊全 😥";
+            if (yDietRisk) feedback += " 飲食含高磷風險！🙅‍♀️";
+            if (!fOk) feedback += ` 飲水量為 ${yFluid}mL 😨`;
             feedback += " 今天我們重新開始，一起加油！💪";
             summaryDiv.innerHTML = feedback;
         }

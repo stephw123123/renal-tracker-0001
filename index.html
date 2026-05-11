@@ -16,22 +16,35 @@
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
+        /* Calendar UI */
+        .calendar-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.8rem; margin-bottom: 15px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .cal-day { font-size: 0.7rem; padding: 5px; border-radius: 5px; background: #fff; border: 1px solid #eee; min-height: 50px; display: flex; flex-direction: column; align-items: center; }
+        .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; }
+        .cal-note { font-size: 0.6rem; color: #e74c3c; line-height: 1; }
+
+        /* History Details */
+        .details-box { display: none; background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 0.8rem; text-align: left; border: 1px solid #ddd; }
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover { background: #f0f7ff; }
+
+        /* Progress Bar */
         .progress-container { background: #eee; border-radius: 20px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden; }
         #progressBar { background: #3498db; height: 100%; width: 0%; transition: width 0.5s ease; }
         .limit-reached { background-color: #e74c3c !important; }
+        
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
         button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        .entry-item { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 0.9rem; position: relative; }
-        .loc-tag { font-size: 0.75rem; color: #7f8c8d; font-style: italic; }
-        .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 8px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
+        .entry-item { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 0.9rem; }
         .action-btns { display: flex; gap: 5px; margin-top: 5px; justify-content: flex-end; }
-        .btn-edit { background: #f1c40f; padding: 5px 10px; font-size: 12px; width: auto; color: black; border-radius: 5px; border: none; cursor: pointer; }
-        .btn-del { background: #e74c3c; padding: 5px 10px; font-size: 12px; width: auto; color: white; border-radius: 5px; border: none; cursor: pointer; }
+        .med-btn { background: #f8f9fa; color: #2c3e50; border: 2px solid #ddd; font-weight: normal; margin-bottom: 5px; }
+        .med-btn.taken { background: #27ae60; color: white; border-color: #27ae60; }
         #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; text-align: center; }
         th, td { padding: 10px; border-bottom: 1px solid #eee; }
-        .med-btn { background: #f8f9fa; color: #2c3e50; border: 2px solid #ddd; font-weight: normal; margin-bottom: 5px; }
-        .med-btn.taken { background: #27ae60; color: white; border-color: #27ae60; }
     </style>
 </head>
 <body>
@@ -45,13 +58,13 @@
 
 <div id="mainApp" style="display:none;">
     <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
-    <div id="yesterdaySummary" class="summary-msg">正在分析昨天的進度...</div>
+    <div id="yesterdaySummary" class="summary-msg">正在分析昨日進度...</div>
 
     <div class="location-section">
         <h2 style="border:none; margin-bottom:10px;">📍 我現在在哪裡？</h2>
         <select id="userLocation" onchange="toggleLocDetail()">
-            <option value="屋企 (在床上)">屋企 (在客廳)</option>
-            <option value="屋企 (在客廳)">屋企 (在床上)</option>
+            <option value="屋企 (在客廳)">屋企 (在客廳)</option>
+            <option value="屋企 (在床上)">屋企 (在床上)</option>
             <option value="街上/商場">街上/商場</option>
             <option value="醫院">醫院</option>
             <option value="其他">其他</option>
@@ -65,27 +78,23 @@
     </div>
 
     <div id="tracker" class="tab-content active">
-        <!-- 1. Food Analysis -->
         <div class="card">
             <h2>🥗 自動飲食分析</h2>
-            <input type="text" id="foodName" placeholder="請輸入食物 (如：牛肉、香腸)">
+            <input type="text" id="foodName" placeholder="輸入食物">
             <button onclick="addFood()" style="background:#f39c12;">紀錄並分析</button>
             <div id="dailyFoodList"></div>
         </div>
 
-        <!-- 2. Medication Tracker (Enhanced) -->
         <div class="card">
-            <h2>💊 藥物狀態記錄</h2>
+            <h2>💊 藥物狀態</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button id="btn8" class="med-btn" onclick="toggleMed('08:00', 'btn8')">08:00 AM</button>
                 <button id="btn12" class="med-btn" onclick="toggleMed('12:00', 'btn12')">12:00 PM</button>
                 <button id="btn20" class="med-btn" onclick="toggleMed('20:00', 'btn20')">08:00 PM</button>
                 <button id="btn22" class="med-btn" onclick="toggleMed('22:00', 'btn22')">10:00 PM</button>
             </div>
-            <div id="dailyMedList" style="margin-top:10px;"></div>
         </div>
 
-        <!-- 3. Fluid -->
         <div class="card">
             <h2>💧 飲水進度 (<span id="curTotal">0</span>/800mL)</h2>
             <div class="progress-container"><div id="progressBar"></div></div>
@@ -96,25 +105,35 @@
                     <option value="其他">其他</option>
                 </select>
             </div>
-            <input type="text" id="fluidNote" placeholder="備註 (如：湯、茶)" style="display:none;">
+            <input type="text" id="fluidNote" placeholder="備註" style="display:none;">
             <button onclick="addFluid()">新增記錄</button>
             <div id="dailyFluidList"></div>
         </div>
     </div>
 
-    <!-- History Tab -->
     <div id="history" class="tab-content">
         <div class="card">
-            <h2>📋 每日指標回顧</h2>
+            <h2>📅 狀態月曆</h2>
+            <div class="calendar-legend">
+                <div class="legend-item"><span class="dot" style="background:green;"></span>3/3成功</div>
+                <div class="legend-item"><span class="dot" style="background:darkorange;"></span>2/3成功</div>
+                <div class="legend-item"><span class="dot" style="background:darkred;"></span>1/3成功</div>
+                <div class="legend-item"><span class="dot" style="background:black;"></span>0/3成功</div>
+            </div>
+            <div class="cal-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="card">
+            <h2>📋 每日詳情 (點擊日期查看)</h2>
             <table id="historyTable">
                 <thead><tr><th>日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead>
                 <tbody id="historyBody"></tbody>
             </table>
-            <button onclick="exportToPDF()" style="background:#2980b9; margin-top:20px;">生成本週報告 (PDF)</button>
+            <button onclick="exportToPDF()" style="background:#2980b9; margin-top:20px;">生成詳細 PDF 報告</button>
         </div>
     </div>
 
-    <button onclick="location.reload()" style="background:#34495e; margin-top:20px; margin-bottom:40px;">登出</button>
+    <button onclick="location.reload()" style="background:#34495e; margin:20px 0 40px;">登出</button>
 </div>
 
 <script>
@@ -122,200 +141,190 @@
     const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "豆", "蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "可樂", "咖啡", "堅果", "罐頭"];
     const HIGH_PRO_KEYWORDS = ["雞肉", "魚", "肉", "蝦", "蟹", "海鮮"];
 
-    function toggleLocDetail() {
-        const detail = document.getElementById('locDetail');
-        detail.style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none';
+    // Basic UI Toggles
+    function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
+    function toggleFluidNote() { document.getElementById('fluidNote').style.display = (document.getElementById('fluidType').value === '其他') ? 'block' : 'none'; }
+    function getToday() { return new Date().toLocaleDateString(); }
+    function getSelectedLocation() { 
+        const loc = document.getElementById('userLocation').value;
+        const det = document.getElementById('locDetail').value;
+        return loc === '其他' && det ? `其他(${det})` : loc;
     }
 
-    function getSelectedLocation() {
-        const mainLoc = document.getElementById('userLocation').value;
-        const detail = document.getElementById('locDetail').value;
-        return (mainLoc === '其他' && detail) ? `其他(${detail})` : mainLoc;
+    // Logic: Scoring a Day
+    function calculateDayScore(dateStr) {
+        const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]').filter(l => l.date === dateStr);
+        const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]').filter(l => l.date === dateStr);
+        const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]').filter(l => l.date === dateStr);
+
+        const fSum = fLogs.reduce((s, l) => s + l.amt, 0);
+        const fOk = fSum >= 700 && fSum <= 800;
+        const dOk = dLogs.length > 0 && !dLogs.some(l => l.risk);
+        const mTaken = mLogs.map(l => l.timeSlot);
+        const mOk = ["08:00", "12:00", "20:00", "22:00"].every(t => mTaken.includes(t));
+
+        let score = 0;
+        let reasons = [];
+        if (mOk) score++; else reasons.push("藥物未齊");
+        if (fOk) score++; else reasons.push("飲水標");
+        if (dOk) score++; else reasons.push("飲食風險");
+
+        let color = "black";
+        if (score === 3) color = "green";
+        else if (score === 2) color = "darkorange";
+        else if (score === 1) color = "darkred";
+
+        return { score, color, reasons, fLogs, dLogs, mLogs, fOk, dOk, mOk, fSum };
     }
 
-    function getMedicalComment(food) {
-        let comments = [];
-        if (HIGH_PHOS_KEYWORDS.some(k => food.includes(k))) comments.push("⚠️ 注意：此食物含磷較高。過多的磷會導致皮膚瘙癢和骨骼問題！");
-        if (HIGH_PRO_KEYWORDS.some(k => food.includes(k))) comments.push("ℹ️ 提醒：這是一種高蛋白質食物。請確保攝取量符合營養師的建議！");
-        if (food.includes("加工") || food.includes("火腿") || food.includes("香腸")) comments.push("⛔ 警告：加工食品含有極易被吸收的無機磷，請盡量避免。");
-        return comments.length > 0 ? comments.join("<br>") : "✅ 良好的選擇，請繼續保持～";
-    }
-
+    // PIN Login
     document.getElementById('pinInput').addEventListener('input', (e) => {
         if (e.target.value === CONFIG.PIN) {
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
-            generateYesterdaySummary();
             updateUI();
+            generateYesterdaySummary();
         }
     });
 
     function generateYesterdaySummary() {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yStr = yesterday.toLocaleDateString();
-        const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]');
-        const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]');
-        const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]');
-        const yFluid = fLogs.filter(l => l.date === yStr).reduce((s, l) => s + l.amt, 0);
-        const yDietRisk = dLogs.filter(l => l.date === yStr).some(l => l.risk);
-        
-        const yMedTaken = mLogs.filter(l => l.date === yStr).map(l => l.timeSlot);
-        const yMedSuccess = ["08:00", "12:00", "20:00", "22:00"].every(t => yMedTaken.includes(t));
-
-        const fOk = yFluid >= 700 && yFluid <= 800;
-        const dOk = dLogs.filter(l => l.date === yStr).length > 0 && !yDietRisk;
-        const summaryDiv = document.getElementById('yesterdaySummary');
-        if (fOk && dOk && yMedSuccess) {
-            summaryDiv.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
-        } else {
+        const y = new Date(); y.setDate(y.getDate()-1);
+        const s = calculateDayScore(y.toLocaleDateString());
+        const div = document.getElementById('yesterdaySummary');
+        if (s.score === 3) div.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
+        else {
             let feedback = "昨天你沒有拿到所有的 ✅！我們注意到：";
-            if (!yMedSuccess) feedback += " 藥物紀錄不齊全 😥";
-            if (yDietRisk) feedback += " 飲食含高磷風險！ 🙅‍♀️";
-            if (!fOk) feedback += ` 飲水量為 ${yFluid}mL 😨`;
+            if (!s.mOk) feedback += " 藥物紀錄不齊全 😥";
+            if (s.dLogs.some(l=>l.risk)) feedback += " 飲食含高磷風險！ 🙅‍♀️";
+            if (!s.fOk) feedback += ` 飲水量為 ${s.fSum}mL 😨`;
             feedback += " 今天我們重新開始，一起加油！💪";
-            summaryDiv.innerHTML = feedback;
+            div.innerHTML = feedback;
         }
     }
 
-    function showTab(tabId, btn) {
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        btn.classList.add('active');
-        if(tabId === 'history') renderHistory();
-    }
-
-    function toggleFluidNote() {
-        document.getElementById('fluidNote').style.display = (document.getElementById('fluidType').value === '其他') ? 'block' : 'none';
-    }
-
-    function getToday() { return new Date().toLocaleDateString(); }
-
+    // CRUD Functions
     function addFluid() {
         const amt = parseInt(document.getElementById('fluidAmt').value);
         if (!amt) return;
-        const type = document.getElementById('fluidType').value;
-        const note = document.getElementById('fluidNote').value;
-        const entry = { id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt, label: type==='其他'&&note ? `其他(${note})` : type, location: getSelectedLocation() };
-        let logs = JSON.parse(localStorage.getItem('f_logs') || '[]');
-        logs.unshift(entry);
-        localStorage.setItem('f_logs', JSON.stringify(logs));
-        document.getElementById('fluidAmt').value = '';
-        updateUI();
+        const entry = { id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt, label: document.getElementById('fluidType').value === '其他' ? `其他(${document.getElementById('fluidNote').value})` : '水', location: getSelectedLocation() };
+        const logs = JSON.parse(localStorage.getItem('f_logs') || '[]');
+        logs.unshift(entry); localStorage.setItem('f_logs', JSON.stringify(logs));
+        document.getElementById('fluidAmt').value = ''; updateUI();
     }
 
     function addFood() {
-        const name = document.getElementById('foodName').value;
-        if (!name) return;
-        const entry = { id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name, comment: getMedicalComment(name), risk: getMedicalComment(name).includes("⚠️") || getMedicalComment(name).includes("⛔"), location: getSelectedLocation() };
-        let logs = JSON.parse(localStorage.getItem('d_logs') || '[]');
-        logs.unshift(entry);
-        localStorage.setItem('d_logs', JSON.stringify(logs));
-        document.getElementById('foodName').value = '';
-        updateUI();
+        const name = document.getElementById('foodName').value; if(!name) return;
+        const comment = getMedicalComment(name);
+        const entry = { id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name, comment, risk: comment.includes("⚠️") || comment.includes("⛔"), location: getSelectedLocation() };
+        const logs = JSON.parse(localStorage.getItem('d_logs') || '[]');
+        logs.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(logs));
+        document.getElementById('foodName').value = ''; updateUI();
     }
 
     function toggleMed(slot, btnId) {
-        let mLogs = JSON.parse(localStorage.getItem('m_list') || '[]');
-        const today = getToday();
-        const existing = mLogs.find(l => l.date === today && l.timeSlot === slot);
-        
-        if (existing) {
-            if(!confirm("確定取消此藥物紀錄？")) return;
-            mLogs = mLogs.filter(l => l !== existing);
-        } else {
-            mLogs.unshift({ id: Date.now(), date: today, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), timeSlot: slot, location: getSelectedLocation() });
-        }
-        localStorage.setItem('m_list', JSON.stringify(mLogs));
-        updateUI();
+        let logs = JSON.parse(localStorage.getItem('m_list') || '[]');
+        const existing = logs.find(l => l.date === getToday() && l.timeSlot === slot);
+        if (existing) { if(confirm("取消記錄？")) logs = logs.filter(l => l !== existing); }
+        else { logs.unshift({ id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), timeSlot: slot, location: getSelectedLocation() }); }
+        localStorage.setItem('m_list', JSON.stringify(logs)); updateUI();
     }
 
-    function deleteItem(storageKey, id) {
-        if(!confirm("確定刪除此記錄？")) return;
-        let logs = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        localStorage.setItem(storageKey, JSON.stringify(logs.filter(l => l.id !== id)));
-        updateUI();
-    }
-
-    function editItem(storageKey, id) {
-        let logs = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        let item = logs.find(l => l.id === id);
-        
-        if (storageKey === 'f_logs') {
-            let newAmt = prompt("修改飲水量 (mL):", item.amt);
-            if(newAmt) item.amt = parseInt(newAmt);
-        } else if (storageKey === 'd_logs') {
-            let newName = prompt("修改食物名稱:", item.name);
-            if(newName) { item.name = newName; item.comment = getMedicalComment(newName); }
-        }
-        
-        let newLoc = prompt("修改位置:", item.location || "");
-        if(newLoc !== null) item.location = newLoc;
-        
-        localStorage.setItem(storageKey, JSON.stringify(logs));
-        updateUI();
+    function getMedicalComment(food) {
+        let c = [];
+        if (HIGH_PHOS_KEYWORDS.some(k => food.includes(k))) c.push("⚠️ 注意：此食物含磷較高。過多的磷會導致皮膚瘙癢和骨骼問題！");
+        if (HIGH_PRO_KEYWORDS.some(k => food.includes(k))) c.push("ℹ️ 提醒：這是一種高蛋白質食物。請確保攝取量符合營養師的建議！");
+        if (food.includes("加工") || food.includes("火腿") || food.includes("香腸")) c.push("⛔ 警告：加工食品含有極易被吸收的無機磷，請盡量避免。");
+        return c.length > 0 ? c.join("<br>") : "✅ 良好的選擇，請繼續保持～";
     }
 
     function updateUI() {
-        const today = getToday();
-        const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]').filter(l => l.date === today);
-        const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]').filter(l => l.date === today);
-        const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]').filter(l => l.date === today);
-        
-        const total = fLogs.reduce((s, l) => s + l.amt, 0);
-        document.getElementById('curTotal').innerText = total;
-        document.getElementById('progressBar').style.width = Math.min((total/CONFIG.LIMIT)*100, 100) + '%';
-        document.getElementById('progressBar').className = total > CONFIG.LIMIT ? 'limit-reached' : '';
-
-        // UI for meds buttons
+        const s = calculateDayScore(getToday());
+        document.getElementById('curTotal').innerText = s.fSum;
+        const bar = document.getElementById('progressBar');
+        bar.style.width = Math.min((s.fSum/800)*100, 100) + '%';
+        bar.className = s.fSum > 800 ? 'limit-reached' : '';
         ["08:00", "12:00", "20:00", "22:00"].forEach((t, i) => {
-            const btn = document.getElementsByClassName('med-btn')[i];
-            const taken = mLogs.some(l => l.timeSlot === t);
-            btn.className = taken ? "med-btn taken" : "med-btn";
+            document.getElementsByClassName('med-btn')[i].className = s.mLogs.some(l=>l.timeSlot===t) ? "med-btn taken" : "med-btn";
         });
-
-        const listBuilder = (logs, key) => logs.map(l => `
-            <div class="entry-item">
-                <span>[${l.time}] ${l.name || l.label || l.timeSlot}: <strong>${l.amt ? l.amt+'mL' : ''}</strong> <span class="loc-tag">@ ${l.location || '未註明'}</span></span>
-                ${l.comment ? `<div class="medical-comment">${l.comment}</div>` : ''}
-                <div class="action-btns">
-                    <button class="btn-edit" onclick="editItem('${key}', ${l.id})">修改</button>
-                    <button class="btn-del" onclick="deleteItem('${key}', ${l.id})">刪除</button>
-                </div>
-            </div>`).join('');
-
-        document.getElementById('dailyFluidList').innerHTML = listBuilder(fLogs, 'f_logs');
-        document.getElementById('dailyFoodList').innerHTML = listBuilder(dLogs, 'd_logs');
-        document.getElementById('dailyMedList').innerHTML = listBuilder(mLogs, 'm_list');
+        const listHtml = (logs) => logs.map(l => `<div class="entry-item"><span>[${l.time}] ${l.name || l.label || l.timeSlot} (${l.amt?l.amt+'mL':''}) <small>@${l.location}</small></span></div>`).join('');
+        document.getElementById('dailyFluidList').innerHTML = listHtml(s.fLogs);
+        document.getElementById('dailyFoodList').innerHTML = listHtml(s.dLogs);
     }
 
-    function renderHistory() {
-        const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]');
-        const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]');
-        const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]');
-        const dates = [...new Set([...fLogs.map(l=>l.date), ...dLogs.map(l=>l.date), ...mLogs.map(l=>l.date)])].sort().reverse();
+    function showTab(id, btn) {
+        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); btn.classList.add('active');
+        if(id === 'history') { renderCalendar(); renderHistoryTable(); }
+    }
 
-        document.getElementById('historyBody').innerHTML = dates.map(d => {
-            const fSum = fLogs.filter(l => l.date === d).reduce((s, l) => s + l.amt, 0);
-            const fTick = (fSum >= 700 && fSum <= 800) ? '✅' : '❌';
-            const dRisk = dLogs.filter(l => l.date === d).some(l => l.risk);
-            const dTick = (dLogs.filter(l=>l.date===d).length > 0 && !dRisk) ? '✅' : '❌';
-            const mTaken = mLogs.filter(l => l.date === d).map(l => l.timeSlot);
-            const mTick = ["08:00", "12:00", "20:00", "22:00"].every(t => mTaken.includes(t)) ? '✅' : '❌';
-            return `<tr><td>${d}</td><td>${mTick}</td><td>${fTick}</td><td>${dTick}</td></tr>`;
+    function renderCalendar() {
+        const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+        for(let i=13; i>=0; i--) {
+            const d = new Date(); d.setDate(d.getDate()-i);
+            const dStr = d.toLocaleDateString();
+            const s = calculateDayScore(dStr);
+            grid.innerHTML += `<div class="cal-day">
+                <div>${d.getDate()}</div>
+                <div class="cal-dot" style="background:${s.color}"></div>
+                <div class="cal-note">${s.score < 3 ? s.reasons[0]||'' : ''}</div>
+            </div>`;
+        }
+    }
+
+    function renderHistoryTable() {
+        const f = JSON.parse(localStorage.getItem('f_logs')||'[]');
+        const d = JSON.parse(localStorage.getItem('d_logs')||'[]');
+        const m = JSON.parse(localStorage.getItem('m_list')||'[]');
+        const dates = [...new Set([...f.map(x=>x.date), ...d.map(x=>x.date), ...m.map(x=>x.date)])].sort().reverse();
+        
+        document.getElementById('historyBody').innerHTML = dates.map(date => {
+            const s = calculateDayScore(date);
+            return `<tr class="clickable-row" onclick="toggleDetails('${date}')">
+                <td>${date}</td>
+                <td>${s.mOk?'✅':'❌'}</td><td>${s.fOk?'✅':'❌'}</td><td>${s.dOk?'✅':'❌'}</td>
+            </tr>
+            <tr><td colspan="4"><div id="details-${date}" class="details-box">
+                <strong>藥物:</strong> ${s.mLogs.map(x=>x.timeSlot).join(', ') || '無'}<br>
+                <strong>飲水:</strong> ${s.fSum}mL<br>
+                <strong>飲食:</strong> ${s.dLogs.map(x=>x.name).join(', ') || '無'}
+            </div></td></tr>`;
         }).join('');
     }
 
+    function toggleDetails(date) {
+        const el = document.getElementById(`details-${date}`);
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
     function exportToPDF() {
-        const historyData = document.getElementById('historyTable').outerHTML;
-        const printWindow = window.open('', '', 'height=600,width=800');
-        printWindow.document.write('<html><head><title>健康報告</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:12px;text-align:center;}h1{text-align:center;}</style></head><body>');
-        printWindow.document.write('<h1>腎臟健康每週指標報告</h1><p>生成時間: ' + new Date().toLocaleString() + '</p>');
-        printWindow.document.write(historyData);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        printWindow.print();
+        const f = JSON.parse(localStorage.getItem('f_logs')||'[]');
+        const dates = [...new Set(f.map(x=>x.date))].sort();
+        const range = dates.length > 0 ? `${dates[0]} 至 ${dates[dates.length-1]}` : getToday();
+        
+        const win = window.open('', '', 'height=700,width=900');
+        win.document.write(`<html><head><title>報告</title><style>
+            body { font-family: sans-serif; padding: 30px; }
+            .section { margin-bottom: 30px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 0.9rem; }
+            .pass { color: green; } .fail { color: red; }
+        </style></head><body>
+            <h1>腎臟健康每週進度報告</h1>
+            <p><strong>報告期間:</strong> ${range}</p>
+            <div class="section"><h2>1. 每日指標摘要</h2>${document.getElementById('historyTable').outerHTML}</div>
+            <div class="section"><h2>2. 詳細記錄明細</h2>`);
+        
+        const allDates = [...new Set(f.map(x=>x.date))].sort().reverse();
+        allDates.forEach(d => {
+            const s = calculateDayScore(d);
+            win.document.write(`<h3>日期: ${d}</h3>
+                <p>藥物: ${s.mLogs.map(x=>`[${x.time}] ${x.timeSlot}`).join(', ')}</p>
+                <p>飲水: ${s.fLogs.map(x=>`[${x.time}] ${x.amt}mL (${x.label})`).join(', ')}</p>
+                <p>飲食: ${s.dLogs.map(x=>`[${x.time}] ${x.name} - ${x.comment}`).join('<br>')}</p><hr>`);
+        });
+        
+        win.document.write(`</div></body></html>`);
+        win.document.close(); win.print();
     }
 </script>
 </body>

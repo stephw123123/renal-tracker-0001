@@ -30,6 +30,8 @@
         #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; text-align: center; }
         th, td { padding: 10px; border-bottom: 1px solid #eee; }
+        .med-btn { background: #f8f9fa; color: #2c3e50; border: 2px solid #ddd; font-weight: normal; margin-bottom: 5px; }
+        .med-btn.taken { background: #27ae60; color: white; border-color: #27ae60; }
     </style>
 </head>
 <body>
@@ -45,12 +47,11 @@
     <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
     <div id="yesterdaySummary" class="summary-msg">正在分析昨天的進度...</div>
 
-    <!-- 📍 Location Section (New) -->
     <div class="location-section">
         <h2 style="border:none; margin-bottom:10px;">📍 我現在在哪裡？</h2>
         <select id="userLocation" onchange="toggleLocDetail()">
-            <option value="屋企 (在床上)">屋企 (在床上)</option>
-            <option value="屋企 (在客廳)">屋企 (在客廳)</option>
+            <option value="屋企 (在床上)">屋企 (在客廳)</option>
+            <option value="屋企 (在客廳)">屋企 (在床上)</option>
             <option value="街上/商場">街上/商場</option>
             <option value="醫院">醫院</option>
             <option value="其他">其他</option>
@@ -72,15 +73,16 @@
             <div id="dailyFoodList"></div>
         </div>
 
-        <!-- 2. Medication -->
+        <!-- 2. Medication Tracker (Enhanced) -->
         <div class="card">
-            <h2>💊 藥物狀態 (自動儲存)</h2>
+            <h2>💊 藥物狀態記錄</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <label><input type="checkbox" id="m8" onchange="autoSaveMeds()"> 08:00</label>
-                <label><input type="checkbox" id="m12" onchange="autoSaveMeds()"> 12:00</label>
-                <label><input type="checkbox" id="m20" onchange="autoSaveMeds()"> 20:00</label>
-                <label><input type="checkbox" id="m22" onchange="autoSaveMeds()"> 22:00</label>
+                <button id="btn8" class="med-btn" onclick="toggleMed('08:00', 'btn8')">08:00 AM</button>
+                <button id="btn12" class="med-btn" onclick="toggleMed('12:00', 'btn12')">12:00 PM</button>
+                <button id="btn20" class="med-btn" onclick="toggleMed('20:00', 'btn20')">08:00 PM</button>
+                <button id="btn22" class="med-btn" onclick="toggleMed('22:00', 'btn22')">10:00 PM</button>
             </div>
+            <div id="dailyMedList" style="margin-top:10px;"></div>
         </div>
 
         <!-- 3. Fluid -->
@@ -100,6 +102,7 @@
         </div>
     </div>
 
+    <!-- History Tab -->
     <div id="history" class="tab-content">
         <div class="card">
             <h2>📋 每日指標回顧</h2>
@@ -153,11 +156,13 @@
         const yStr = yesterday.toLocaleDateString();
         const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]');
         const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]');
-        const mLogs = JSON.parse(localStorage.getItem('m_logs') || '{}');
+        const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]');
         const yFluid = fLogs.filter(l => l.date === yStr).reduce((s, l) => s + l.amt, 0);
         const yDietRisk = dLogs.filter(l => l.date === yStr).some(l => l.risk);
-        const yMeds = mLogs[yStr] || {};
-        const yMedSuccess = yMeds.m8 && yMeds.m12 && yMeds.m20 && yMeds.m22;
+        
+        const yMedTaken = mLogs.filter(l => l.date === yStr).map(l => l.timeSlot);
+        const yMedSuccess = ["08:00", "12:00", "20:00", "22:00"].every(t => yMedTaken.includes(t));
+
         const fOk = yFluid >= 700 && yFluid <= 800;
         const dOk = dLogs.filter(l => l.date === yStr).length > 0 && !yDietRisk;
         const summaryDiv = document.getElementById('yesterdaySummary');
@@ -166,7 +171,7 @@
         } else {
             let feedback = "昨天你沒有拿到所有的 ✅！我們注意到：";
             if (!yMedSuccess) feedback += " 藥物紀錄不齊全 😥";
-            if (yDietRisk) feedback += " 飲食含高磷風險！🙅‍♀️";
+            if (yDietRisk) feedback += " 飲食含高磷風險！ 🙅‍♀️";
             if (!fOk) feedback += ` 飲水量為 ${yFluid}mL 😨`;
             feedback += " 今天我們重新開始，一起加油！💪";
             summaryDiv.innerHTML = feedback;
@@ -211,78 +216,94 @@
         updateUI();
     }
 
-    function autoSaveMeds() {
-        const meds = { m8: document.getElementById('m8').checked, m12: document.getElementById('m12').checked, m20: document.getElementById('m20').checked, m22: document.getElementById('m22').checked, location: getSelectedLocation() };
-        let allMeds = JSON.parse(localStorage.getItem('m_logs') || '{}');
-        allMeds[getToday()] = meds;
-        localStorage.setItem('m_logs', JSON.stringify(allMeds));
-    }
-
-    function deleteItem(type, id) {
-        if(!confirm("確定刪除此記錄？")) return;
-        let logs = JSON.parse(localStorage.getItem(type) || '[]');
-        localStorage.setItem(type, JSON.stringify(logs.filter(l => l.id !== id)));
+    function toggleMed(slot, btnId) {
+        let mLogs = JSON.parse(localStorage.getItem('m_list') || '[]');
+        const today = getToday();
+        const existing = mLogs.find(l => l.date === today && l.timeSlot === slot);
+        
+        if (existing) {
+            if(!confirm("確定取消此藥物紀錄？")) return;
+            mLogs = mLogs.filter(l => l !== existing);
+        } else {
+            mLogs.unshift({ id: Date.now(), date: today, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), timeSlot: slot, location: getSelectedLocation() });
+        }
+        localStorage.setItem('m_list', JSON.stringify(mLogs));
         updateUI();
     }
 
-    function editItem(type, id) {
-        let logs = JSON.parse(localStorage.getItem(type) || '[]');
+    function deleteItem(storageKey, id) {
+        if(!confirm("確定刪除此記錄？")) return;
+        let logs = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        localStorage.setItem(storageKey, JSON.stringify(logs.filter(l => l.id !== id)));
+        updateUI();
+    }
+
+    function editItem(storageKey, id) {
+        let logs = JSON.parse(localStorage.getItem(storageKey) || '[]');
         let item = logs.find(l => l.id === id);
-        if (type === 'f_logs') {
+        
+        if (storageKey === 'f_logs') {
             let newAmt = prompt("修改飲水量 (mL):", item.amt);
             if(newAmt) item.amt = parseInt(newAmt);
-        } else {
+        } else if (storageKey === 'd_logs') {
             let newName = prompt("修改食物名稱:", item.name);
             if(newName) { item.name = newName; item.comment = getMedicalComment(newName); }
         }
-        localStorage.setItem(type, JSON.stringify(logs));
+        
+        let newLoc = prompt("修改位置:", item.location || "");
+        if(newLoc !== null) item.location = newLoc;
+        
+        localStorage.setItem(storageKey, JSON.stringify(logs));
         updateUI();
     }
 
     function updateUI() {
-        const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]').filter(l => l.date === getToday());
-        const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]').filter(l => l.date === getToday());
+        const today = getToday();
+        const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]').filter(l => l.date === today);
+        const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]').filter(l => l.date === today);
+        const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]').filter(l => l.date === today);
+        
         const total = fLogs.reduce((s, l) => s + l.amt, 0);
         document.getElementById('curTotal').innerText = total;
         document.getElementById('progressBar').style.width = Math.min((total/CONFIG.LIMIT)*100, 100) + '%';
         document.getElementById('progressBar').className = total > CONFIG.LIMIT ? 'limit-reached' : '';
 
-        document.getElementById('dailyFluidList').innerHTML = fLogs.map(l => `
+        // UI for meds buttons
+        ["08:00", "12:00", "20:00", "22:00"].forEach((t, i) => {
+            const btn = document.getElementsByClassName('med-btn')[i];
+            const taken = mLogs.some(l => l.timeSlot === t);
+            btn.className = taken ? "med-btn taken" : "med-btn";
+        });
+
+        const listBuilder = (logs, key) => logs.map(l => `
             <div class="entry-item">
-                <span>[${l.time}] ${l.label}: <strong>${l.amt}mL</strong> <span class="loc-tag">@ ${l.location}</span></span>
+                <span>[${l.time}] ${l.name || l.label || l.timeSlot}: <strong>${l.amt ? l.amt+'mL' : ''}</strong> <span class="loc-tag">@ ${l.location || '未註明'}</span></span>
+                ${l.comment ? `<div class="medical-comment">${l.comment}</div>` : ''}
                 <div class="action-btns">
-                    <button class="btn-edit" onclick="editItem('f_logs', ${l.id})">修改</button>
-                    <button class="btn-del" onclick="deleteItem('f_logs', ${l.id})">刪除</button>
+                    <button class="btn-edit" onclick="editItem('${key}', ${l.id})">修改</button>
+                    <button class="btn-del" onclick="deleteItem('${key}', ${l.id})">刪除</button>
                 </div>
             </div>`).join('');
 
-        document.getElementById('dailyFoodList').innerHTML = dLogs.map(d => `
-            <div class="entry-item">
-                <strong>[${d.time}] ${d.name}</strong> <span class="loc-tag">@ ${d.location}</span>
-                <div class="medical-comment">${d.comment}</div>
-                <div class="action-btns">
-                    <button class="btn-edit" onclick="editItem('d_logs', ${d.id})">修改</button>
-                    <button class="btn-del" onclick="deleteItem('d_logs', ${d.id})">刪除</button>
-                </div>
-            </div>`).join('');
-
-        const meds = JSON.parse(localStorage.getItem('m_logs') || '{}')[getToday()] || {};
-        ['m8', 'm12', 'm20', 'm22'].forEach(id => document.getElementById(id).checked = meds[id] || false);
+        document.getElementById('dailyFluidList').innerHTML = listBuilder(fLogs, 'f_logs');
+        document.getElementById('dailyFoodList').innerHTML = listBuilder(dLogs, 'd_logs');
+        document.getElementById('dailyMedList').innerHTML = listBuilder(mLogs, 'm_list');
     }
 
     function renderHistory() {
         const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]');
         const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]');
-        const mLogs = JSON.parse(localStorage.getItem('m_logs') || '{}');
-        const dates = [...new Set([...fLogs.map(l=>l.date), ...dLogs.map(l=>l.date), ...Object.keys(mLogs)])].sort().reverse();
+        const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]');
+        const dates = [...new Set([...fLogs.map(l=>l.date), ...dLogs.map(l=>l.date), ...mLogs.map(l=>l.date)])].sort().reverse();
+
         document.getElementById('historyBody').innerHTML = dates.map(d => {
             const fSum = fLogs.filter(l => l.date === d).reduce((s, l) => s + l.amt, 0);
-            const fluidTick = (fSum >= 700 && fSum <= 800) ? '✅' : '❌';
-            const dayDiet = dLogs.filter(l => l.date === d);
-            const dietTick = (dayDiet.length > 0 && !dayDiet.some(l => l.risk)) ? '✅' : '❌';
-            const m = mLogs[d] || {};
-            const medTick = (m.m8 && m.m12 && m.m20 && m.m22) ? '✅' : '❌';
-            return `<tr><td>${d}</td><td>${medTick}</td><td>${fluidTick}</td><td>${dietTick}</td></tr>`;
+            const fTick = (fSum >= 700 && fSum <= 800) ? '✅' : '❌';
+            const dRisk = dLogs.filter(l => l.date === d).some(l => l.risk);
+            const dTick = (dLogs.filter(l=>l.date===d).length > 0 && !dRisk) ? '✅' : '❌';
+            const mTaken = mLogs.filter(l => l.date === d).map(l => l.timeSlot);
+            const mTick = ["08:00", "12:00", "20:00", "22:00"].every(t => mTaken.includes(t)) ? '✅' : '❌';
+            return `<tr><td>${d}</td><td>${mTick}</td><td>${fTick}</td><td>${dTick}</td></tr>`;
         }).join('');
     }
 

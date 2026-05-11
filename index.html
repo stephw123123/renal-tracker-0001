@@ -28,8 +28,9 @@
         .entry-log-item { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.85rem; }
         .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-        .cal-day { font-size: 0.9rem; padding: 5px 2px; border-radius: 4px; background: #fff; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; }
-        .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; }
+        .cal-day { font-size: 0.9rem; padding: 5px 2px; border-radius: 4px; background: #fff; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        .cal-header { font-weight: bold; background: #f1f2f6 !important; min-height: 25px !important; font-size: 0.75rem; }
+        .cal-dot { width: 22px; height: 22px; border-radius: 50%; margin: 4px 0; border: 1px solid rgba(0,0,0,0.1); }
         .cal-note { font-size: 0.55rem; color: #666; line-height: 1.1; text-align: center; }
         #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; font-size: 0.85rem; }
@@ -143,7 +144,14 @@
 
     function addFood() {
         const n = document.getElementById('foodName').value; if(!n) return;
-        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: getMedicalComment(n), risk: getMedicalComment(n).includes("⚠️") || getMedicalComment(n).includes("⛔"), location: getSelectedLocation() };
+        const c = (function(f){
+            let r = [];
+            if (HIGH_PHOS_KEYWORDS.some(k => f.includes(k))) r.push("⚠️注意高磷");
+            if (HIGH_PRO_KEYWORDS.some(k => f.includes(k))) r.push("ℹ️提醒高蛋白");
+            if (f.includes("加工")||f.includes("火腿")||f.includes("香腸")) r.push("⛔警告加工磷");
+            return r.length > 0 ? r.join("/") : "✅ 良好的選擇";
+        })(n);
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: getSelectedLocation() };
         let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
         document.getElementById('foodName').value = ''; updateUI();
     }
@@ -158,7 +166,7 @@
     function toggleMed(slot) {
         let l = JSON.parse(localStorage.getItem('m_list') || '[]'); const today = getTodayKey();
         const ex = l.find(x => x.date === today && x.timeSlot === slot);
-        if (ex) { if(confirm("取消記錄？")) l = l.filter(x => x !== ex); }
+        if (ex) { if(confirm("取消？")) l = l.filter(x => x !== ex); }
         else { l.unshift({ id: Date.now(), date: today, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), timeSlot: slot, location: getSelectedLocation() }); }
         localStorage.setItem('m_list', JSON.stringify(l)); updateUI();
     }
@@ -172,7 +180,7 @@
         else { bar.classList.remove('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'none'; }
         const btns = document.getElementsByClassName('med-btn');
         MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x=>x.timeSlot===t) ? "med-btn taken" : "med-btn");
-        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '屋企'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
+        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'}</div>`).join('');
         document.getElementById('dailyFluidList').innerHTML = b(s.f); document.getElementById('dailyFoodList').innerHTML = b(s.d); document.getElementById('dailyMedList').innerHTML = b(s.m);
     }
 
@@ -213,11 +221,16 @@
             h1, h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
             table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+            .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
+            .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+            .cal-day { font-size: 0.9rem; padding: 5px 2px; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; background:#fff; }
+            .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; -webkit-print-color-adjust: exact; }
+            .cal-note { font-size: 0.55rem; color: #666; text-align: center; }
             .day-block { margin-top: 40px; page-break-inside: avoid; border-top: 1px solid #eee; padding-top: 20px; }
         </style></head><body>
             <h1>腎臟健康進度完整報告</h1>
             <p><strong>報告期間:</strong> ${range}</p>
-            <h2>1. 指標摘要 (✅=達標, ❌=未達標)</h2>
+            <h2>1. 指標摘要</h2>
             ${document.getElementById('historyTable').outerHTML}
             <div style="page-break-before: always;"></div>
             <h2>2. 視覺月曆回顧</h2>
@@ -238,12 +251,11 @@
 
         win.document.write(`</body></html>`);
         win.document.close();
-        setTimeout(() => win.print(), 500);
+        setTimeout(() => win.print(), 800);
     }
 
     function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
     function getSelectedLocation() { const l = document.getElementById('userLocation').value; return l === '其他' ? `其他(${document.getElementById('locDetail').value})` : l; }
-    function getMedicalComment(f) { let c=[]; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) c.push("⚠️注意高磷"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) c.push("ℹ️提醒高蛋白"); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) c.push("⛔警告加工磷"); return c.length>0 ? c.join("/") : "✅ 良好的選擇"; }
     function showTab(id, btn) { document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); if(id === 'calendarTab') renderMultiMonthCalendar(); if(id === 'history') renderHistoryTable(); }
 
     document.getElementById('pinInput').addEventListener('input', (e) => {

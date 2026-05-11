@@ -10,6 +10,7 @@
         h2 { border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; font-size: 1.1rem; }
         .welcome-msg { color: #3498db; font-weight: bold; margin-bottom: 5px; font-size: 1.1rem; text-align: center; }
         .summary-msg { background: #e3f2fd; padding: 12px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 20px; border-left: 4px solid #2196f3; color: #0d47a1; }
+        .location-section { background: #fff; border: 2px solid #3498db; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         .tabs { display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
         .tab-btn { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: #3498db; color: white; }
@@ -21,6 +22,7 @@
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
         button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
         .entry-item { border-bottom: 1px solid #eee; padding: 10px 0; font-size: 0.9rem; position: relative; }
+        .loc-tag { font-size: 0.75rem; color: #7f8c8d; font-style: italic; }
         .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 8px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
         .action-btns { display: flex; gap: 5px; margin-top: 5px; justify-content: flex-end; }
         .btn-edit { background: #f1c40f; padding: 5px 10px; font-size: 12px; width: auto; color: black; border-radius: 5px; border: none; cursor: pointer; }
@@ -42,6 +44,19 @@
 <div id="mainApp" style="display:none;">
     <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
     <div id="yesterdaySummary" class="summary-msg">正在分析昨天的進度...</div>
+
+    <!-- 📍 Location Section (New) -->
+    <div class="location-section">
+        <h2 style="border:none; margin-bottom:10px;">📍 我現在在哪裡？</h2>
+        <select id="userLocation" onchange="toggleLocDetail()">
+            <option value="屋企 (在床上)">屋企 (在床上)</option>
+            <option value="屋企 (在客廳)">屋企 (在客廳)</option>
+            <option value="街上/商場">街上/商場</option>
+            <option value="醫院">醫院</option>
+            <option value="其他">其他</option>
+        </select>
+        <input type="text" id="locDetail" placeholder="請註明地點細節..." style="display:none;">
+    </div>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="showTab('tracker', this)">今日記錄</button>
@@ -104,6 +119,17 @@
     const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "豆", "蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "可樂", "咖啡", "堅果", "罐頭"];
     const HIGH_PRO_KEYWORDS = ["雞肉", "魚", "肉", "蝦", "蟹", "海鮮"];
 
+    function toggleLocDetail() {
+        const detail = document.getElementById('locDetail');
+        detail.style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none';
+    }
+
+    function getSelectedLocation() {
+        const mainLoc = document.getElementById('userLocation').value;
+        const detail = document.getElementById('locDetail').value;
+        return (mainLoc === '其他' && detail) ? `其他(${detail})` : mainLoc;
+    }
+
     function getMedicalComment(food) {
         let comments = [];
         if (HIGH_PHOS_KEYWORDS.some(k => food.includes(k))) comments.push("⚠️ 注意：此食物含磷較高。過多的磷會導致皮膚瘙癢和骨骼問題！");
@@ -125,19 +151,15 @@
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yStr = yesterday.toLocaleDateString();
-
         const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]');
         const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]');
         const mLogs = JSON.parse(localStorage.getItem('m_logs') || '{}');
-
         const yFluid = fLogs.filter(l => l.date === yStr).reduce((s, l) => s + l.amt, 0);
         const yDietRisk = dLogs.filter(l => l.date === yStr).some(l => l.risk);
         const yMeds = mLogs[yStr] || {};
         const yMedSuccess = yMeds.m8 && yMeds.m12 && yMeds.m20 && yMeds.m22;
-
         const fOk = yFluid >= 700 && yFluid <= 800;
         const dOk = dLogs.filter(l => l.date === yStr).length > 0 && !yDietRisk;
-
         const summaryDiv = document.getElementById('yesterdaySummary');
         if (fOk && dOk && yMedSuccess) {
             summaryDiv.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
@@ -170,7 +192,7 @@
         if (!amt) return;
         const type = document.getElementById('fluidType').value;
         const note = document.getElementById('fluidNote').value;
-        const entry = { id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt, label: type==='其他'&&note ? `其他(${note})` : type };
+        const entry = { id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt, label: type==='其他'&&note ? `其他(${note})` : type, location: getSelectedLocation() };
         let logs = JSON.parse(localStorage.getItem('f_logs') || '[]');
         logs.unshift(entry);
         localStorage.setItem('f_logs', JSON.stringify(logs));
@@ -181,14 +203,7 @@
     function addFood() {
         const name = document.getElementById('foodName').value;
         if (!name) return;
-        const entry = { 
-            id: Date.now(), 
-            date: getToday(), 
-            time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
-            name, 
-            comment: getMedicalComment(name), 
-            risk: getMedicalComment(name).includes("⚠️") || getMedicalComment(name).includes("⛔") 
-        };
+        const entry = { id: Date.now(), date: getToday(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name, comment: getMedicalComment(name), risk: getMedicalComment(name).includes("⚠️") || getMedicalComment(name).includes("⛔"), location: getSelectedLocation() };
         let logs = JSON.parse(localStorage.getItem('d_logs') || '[]');
         logs.unshift(entry);
         localStorage.setItem('d_logs', JSON.stringify(logs));
@@ -197,7 +212,7 @@
     }
 
     function autoSaveMeds() {
-        const meds = { m8: document.getElementById('m8').checked, m12: document.getElementById('m12').checked, m20: document.getElementById('m20').checked, m22: document.getElementById('m22').checked };
+        const meds = { m8: document.getElementById('m8').checked, m12: document.getElementById('m12').checked, m20: document.getElementById('m20').checked, m22: document.getElementById('m22').checked, location: getSelectedLocation() };
         let allMeds = JSON.parse(localStorage.getItem('m_logs') || '{}');
         allMeds[getToday()] = meds;
         localStorage.setItem('m_logs', JSON.stringify(allMeds));
@@ -234,7 +249,7 @@
 
         document.getElementById('dailyFluidList').innerHTML = fLogs.map(l => `
             <div class="entry-item">
-                <span>${l.time} ${l.label}: <strong>${l.amt}mL</strong></span>
+                <span>[${l.time}] ${l.label}: <strong>${l.amt}mL</strong> <span class="loc-tag">@ ${l.location}</span></span>
                 <div class="action-btns">
                     <button class="btn-edit" onclick="editItem('f_logs', ${l.id})">修改</button>
                     <button class="btn-del" onclick="deleteItem('f_logs', ${l.id})">刪除</button>
@@ -243,7 +258,7 @@
 
         document.getElementById('dailyFoodList').innerHTML = dLogs.map(d => `
             <div class="entry-item">
-                <strong>[${d.time}] ${d.name}</strong>
+                <strong>[${d.time}] ${d.name}</strong> <span class="loc-tag">@ ${d.location}</span>
                 <div class="medical-comment">${d.comment}</div>
                 <div class="action-btns">
                     <button class="btn-edit" onclick="editItem('d_logs', ${d.id})">修改</button>
@@ -260,7 +275,6 @@
         const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]');
         const mLogs = JSON.parse(localStorage.getItem('m_logs') || '{}');
         const dates = [...new Set([...fLogs.map(l=>l.date), ...dLogs.map(l=>l.date), ...Object.keys(mLogs)])].sort().reverse();
-
         document.getElementById('historyBody').innerHTML = dates.map(d => {
             const fSum = fLogs.filter(l => l.date === d).reduce((s, l) => s + l.amt, 0);
             const fluidTick = (fSum >= 700 && fSum <= 800) ? '✅' : '❌';

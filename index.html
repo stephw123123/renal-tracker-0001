@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESRD 患者依從性日誌</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: #f0f2f5;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1,
+    h2 {
+      color: #333;
+      text-align: center;
+    }
+
+    .section {
+      margin-bottom: 25px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .alert {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+      display: none;
+    }
+
+    #pinScreen {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- PIN Lock Screen -->
+    <div id="pinScreen">
+      <h2>請輸入 4 位數 PIN 碼</h2> <input type="password" id="pinInput" maxlength="4" placeholder="****"> <button onclick="checkPIN()">解鎖</button>
+    </div> <!-- Main App Content -->
+    <div id="appContent" style="display:none;">
+      <h1>健康追蹤日誌</h1> <!-- 1. Medication -->
+      <div class="section">
+        <h2>藥物依從性</h2> <label><input type="checkbox" id="med8"> 08:00 AM</label> <label><input type="checkbox" id="med12"> 12:00 PM</label> <label><input type="checkbox" id="med20"> 08:00 PM</label> <label><input type="checkbox" id="med22"> 10:00 PM</label> <button onclick="saveMedData()">儲存藥物紀錄</button>
+      </div> <!-- 2. Fluid Tracking -->
+      <div class="section">
+        <h2>飲水量追蹤</h2>
+        <p>每日上限: 800mL</p> <input type="number" id="fluidInput" placeholder="輸入飲水量 (mL)"> <button onclick="addFluid()">新增飲水量</button>
+        <p>今日累計: <span id="fluidTotal">0</span> mL</p>
+        <div id="fluidAlert" class="alert">⚠️ 警告：已超過每日 800mL 飲水限制！</div>
+      </div> <button style="background-color: #6c757d;" onclick="clearAllData()">清除所有資料 (重置)</button>
+    </div>
+  </div>
+  <script>
+    const STORAGE_KEY = 'esrd_patient_data';
+    const CORRECT_PIN = '1234'; // Default PIN // PIN Check function checkPIN() { if (document.getElementById('pinInput').value === CORRECT_PIN) { document.getElementById('pinScreen').style.display = 'none'; document.getElementById('appContent').style.display = 'block'; loadData(); } else { alert('PIN 碼錯誤'); } } // Load data from localStorage function loadData() { const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { fluid: 0, med: {} }; document.getElementById('fluidTotal').innerText = data.fluid; checkFluidAlert(data.fluid); // Load checkbox states (simplified) document.getElementById('med8').checked = data.med.med8 || false; document.getElementById('med12').checked = data.med.med12 || false; document.getElementById('med20').checked = data.med.med20 || false; document.getElementById('med22').checked = data.med.med22 || false; } function addFluid() { const input = document.getElementById('fluidInput'); const amount = parseInt(input.value); if (isNaN(amount) || amount <= 0) return; let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { fluid: 0, med: {} }; data.fluid += amount; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); document.getElementById('fluidTotal').innerText = data.fluid; input.value = ''; checkFluidAlert(data.fluid); } function checkFluidAlert(total) { const alertBox = document.getElementById('fluidAlert'); alertBox.style.display = total > 800 ? 'block' : 'none'; } function saveMedData() { let data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { fluid: 0, med: {} }; data.med = { med8: document.getElementById('med8').checked, med12: document.getElementById('med12').checked, med20: document.getElementById('med20').checked, med22: document.getElementById('med22').checked }; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); alert('藥物紀錄已儲存'); } function clearAllData() { if (confirm('確定要清除所有資料嗎？此操作無法還原。')) { localStorage.removeItem(STORAGE_KEY); location.reload(); } } 
+  </script>
+</body>
+
+</html>

@@ -134,7 +134,7 @@
 <script>
     const CONFIG = { LIMIT: 800, PIN: "1234" };
     const MED_SLOTS = ['08:00 (早上)', '12:00 (中午)', '20:00 (晚上)', '22:00 (睡覺前)'];
-    const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "豆", "蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "可樂", "咖啡", "堅果", "罐頭"];
+    const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "芝士", "豆", "豆奶", "醃肉","蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "朱古力","可樂", "咖啡", "堅果", "罐頭"];
     const HIGH_PRO_KEYWORDS = ["雞肉", "魚", "肉", "蝦", "蟹", "海鮮"];
 
     // Register Service Worker for Notifications
@@ -174,7 +174,7 @@
                 const m = JSON.parse(localStorage.getItem('m_list') || '[]').filter(l => l.date === today);
                 if (!m.some(l => l.timeSlot.startsWith(t))) {
                     new Notification("💊 藥物記錄提醒", {
-                        body: `現在是 ${t}，記得記錄您的藥物喔！`,
+                        body: `現在是 ${t}，記得記錄你的藥物喔！`,
                         icon: "https://github.io"
                     });
                 }
@@ -202,7 +202,7 @@
     function addFood() {
         const n = document.getElementById('foodName').value; if(!n) return;
         const c = (function(f){
-            let r = []; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) r.push("⚠️注意高磷"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) r.push("ℹ️提醒高蛋白"); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) r.push("⛔警告加工磷");
+            let r = []; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) r.push("⚠️注意高磷食物！請先跟註冊營養師或醫生商量你的餐飲選擇"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) r.push(" "); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) r.push("⛔注意高磷食物！請先跟註冊營養師或醫生商量你的餐飲選擇");
             return r.length > 0 ? r.join("/") : "";
         })(n);
         const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: getSelectedLocation() };
@@ -225,17 +225,59 @@
         localStorage.setItem('m_list', JSON.stringify(l)); updateUI();
     }
 
-    function updateUI() {
+        function updateUI() {
         const s = calculateDayScore(getTodayKey());
         document.getElementById('curTotal').innerText = s.fSum;
         const bar = document.getElementById('progressBar');
         bar.style.width = Math.min((s.fSum/800)*100, 100) + '%';
         if (s.fSum > 800) { bar.classList.add('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'block'; }
         else { bar.classList.remove('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'none'; }
+        
         const btns = document.getElementsByClassName('med-btn');
         MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x=>x.timeSlot===t) ? "med-btn taken" : "med-btn");
-        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
-        document.getElementById('dailyFluidList').innerHTML = b(s.f); document.getElementById('dailyFoodList').innerHTML = b(s.d); document.getElementById('dailyMedList').innerHTML = b(s.m);
+        
+        // This builder now creates the text PLUS the Edit/Delete buttons
+        const builder = (logs, storageKey) => logs.map(x => `
+            <div class="entry-log-item">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div style="flex-grow:1;">
+                        [${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt ? x.amt+'mL' : ''} @${x.location || '未註明'}
+                        ${x.comment ? `<div class="medical-comment">${x.comment}</div>` : ''}
+                    </div>
+                    <div style="display:flex; gap:5px; margin-left:10px;">
+                        <button onclick="editItem('${storageKey}', ${x.id})" style="background:#f1c40f; color:black; padding:4px 8px; font-size:10px; width:auto; height:auto; margin:0;">修改</button>
+                        <button onclick="deleteItem('${storageKey}', ${x.id})" style="background:#e74c3c; color:white; padding:4px 8px; font-size:10px; width:auto; height:auto; margin:0;">刪除</button>
+                    </div>
+                </div>
+            </div>`).join('');
+            
+        document.getElementById('dailyFluidList').innerHTML = builder(s.f, 'f_logs');
+        document.getElementById('dailyFoodList').innerHTML = builder(s.d, 'd_logs');
+        document.getElementById('dailyMedList').innerHTML = builder(s.m, 'm_list');
+    }
+
+    // IMPORTANT: Make sure you also paste these two functions below the new updateUI
+    function deleteItem(storageKey, id) {
+        if(!confirm("確定刪除此記錄？")) return;
+        let logs = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        localStorage.setItem(storageKey, JSON.stringify(logs.filter(l => l.id !== id)));
+        updateUI();
+    }
+
+    function editItem(storageKey, id) {
+        let logs = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        let item = logs.find(l => l.id === id);
+        if (storageKey === 'f_logs') {
+            let newAmt = prompt("修改飲水量 (mL):", item.amt);
+            if(newAmt) item.amt = parseInt(newAmt);
+        } else if (storageKey === 'd_logs') {
+            let newName = prompt("修改食物名稱:", item.name);
+            if(newName) { item.name = newName; }
+        }
+        let newLoc = prompt("修改位置:", item.location || "");
+        if(newLoc !== null) item.location = newLoc;
+        localStorage.setItem(storageKey, JSON.stringify(logs));
+        updateUI();
     }
 
     function renderMultiMonthCalendar() {

@@ -3,164 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>腎臟健康追蹤日誌</title>
+    <title>腎臟健康日誌</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; padding: 15px; line-height: 1.6; }
+        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; padding: 15px; margin: 0; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; }
-        button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; font-size: 16px; margin-top: 5px; }
-        .warning { color: white; background: #e74c3c; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
-        .caution { color: #856404; background: #fff3cd; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; border: 1px solid #ffeeba; }
-        input[type="number"], input[type="password"], input[type="text"], select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        #pinOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; font-size: 1.2rem; }
         
-        /* Tab Styling */
-        .tabs { display: flex; margin-bottom: 15px; gap: 5px; }
-        .tab-btn { background: #d1d8e0; color: #4b6584; flex: 1; padding: 10px; border-radius: 8px 8px 0 0; text-align: center; cursor: pointer; }
+        /* Navigation Tabs */
+        .tabs { display: flex; background: #fff; border-radius: 12px; margin-bottom: 15px; overflow: hidden; border: 1px solid #ddd; }
+        .tab-btn { flex: 1; padding: 15px; text-align: center; cursor: pointer; background: #f8f9fa; border: none; font-weight: bold; color: #666; }
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
+        /* Inputs & Buttons */
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
+        button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; cursor: pointer; font-size: 16px; font-weight: bold; }
+        
+        /* Alerts */
+        .warning { color: white; background: #e74c3c; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; text-align: center; }
+        .caution { color: #856404; background: #fff3cd; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; border: 1px solid #ffeeba; }
+        
+        /* PIN Overlay */
+        #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         
         /* History Table */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #f8f9fa; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
     </style>
 </head>
 <body>
 
 <div id="pinOverlay">
     <div class="card" style="width: 280px; text-align: center;">
-        <h3>請輸入 PIN 碼</h3>
-        <input type="password" id="pinInput" maxlength="4" placeholder="輸入 4 位數" inputmode="numeric">
+        <h3 id="displayPatientName">歡迎回來</h3>
+        <p>請輸入 PIN 碼解鎖</p>
+        <input type="password" id="pinInput" maxlength="4" placeholder="****" inputmode="numeric">
     </div>
 </div>
 
 <div id="mainApp" style="display:none;">
-    <h1>健康追蹤日誌</h1>
-
-    <!-- Tabs Navigation -->
     <div class="tabs">
-        <div class="tab-btn active" onclick="showTab('tracker')">今日記錄</div>
-        <div class="tab-btn" onclick="showTab('history')">歷史記錄</div>
+        <button class="tab-btn active" onclick="switchTab('tracker', this)">今日記錄</button>
+        <button class="tab-btn" onclick="switchTab('history', this)">歷史清單</button>
     </div>
 
-    <!-- Tracker Tab -->
     <div id="tracker" class="tab-content active">
         <div class="card">
             <h2>💊 藥物紀錄</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                 <label><input type="checkbox" id="m8"> 08:00 AM</label>
                 <label><input type="checkbox" id="m12"> 12:00 PM</label>
                 <label><input type="checkbox" id="m20"> 08:00 PM</label>
                 <label><input type="checkbox" id="m22"> 10:00 PM</label>
             </div>
-            <button onclick="saveMeds()" style="background:#27ae60; margin-top:15px;">儲存藥物紀錄</button>
+            <button onclick="saveMeds()" style="background:#27ae60;">儲存藥物狀態</button>
         </div>
 
         <div class="card">
-            <h2>💧 飲水 (上限 800mL)</h2>
+            <h2>💧 飲水追蹤</h2>
             <input type="number" id="fluidAmt" placeholder="輸入毫升 (mL)">
-            <button onclick="addFluid()">新增飲水</button>
-            <p>今日累計: <strong id="totalFluid">0</strong> / 800 mL</p>
-            <div id="fluidWarn" class="warning">⚠️ 注意：您已超過每日 800mL 限制！</div>
+            <button onclick="addFluid()">確認新增</button>
+            <p style="text-align: center; font-size: 1.1rem; margin-top: 15px;">
+                今日累計: <strong id="totalFluid">0</strong> / <span id="limitDisplay">800</span> mL
+            </p>
+            <div id="fluidWarn" class="warning">⚠️ 您已超過每日飲水限制！</div>
         </div>
 
         <div class="card">
             <h2>🥗 飲食追蹤</h2>
-            <input type="text" id="foodName" placeholder="食物名稱">
+            <input type="text" id="foodName" placeholder="食物內容">
             <select id="phosLevel">
                 <option value="low">低磷 ✅</option>
                 <option value="med">中磷 ⚠️</option>
                 <option value="high">高磷 ❌</option>
             </select>
-            <button onclick="addFood()" style="background:#f39c12;">記錄食物</button>
-            <div id="dietWarn" class="caution">提示：高磷食物可能導致搔癢，請謹慎。</div>
+            <button onclick="addFood()" style="background:#f39c12;">紀錄飲食</button>
+            <div id="dietWarn" class="caution">提示：高磷食物可能導致不適，請留意。</div>
         </div>
     </div>
 
-    <!-- History Tab -->
     <div id="history" class="tab-content">
         <div class="card">
-            <h2>📋 歷史清單</h2>
+            <h2>📋 歷史記錄</h2>
             <table id="historyTable">
-                <thead>
-                    <tr>
-                        <th>時間</th>
-                        <th>項目</th>
-                        <th>數值/備註</th>
-                    </tr>
-                </thead>
-                <tbody id="historyBody">
-                    <!-- Data entries will appear here -->
-                </tbody>
+                <thead><tr><th>時間</th><th>項目</th><th>詳情</th></tr></thead>
+                <tbody id="historyBody"></tbody>
             </table>
-            <button onclick="clearHistory()" style="background:#e74c3c; margin-top:20px; font-size:12px;">清空所有歷史資料</button>
+            <button onclick="confirmClear()" style="background:#95a5a6; margin-top:20px; font-size: 12px;">重置所有數據</button>
         </div>
     </div>
 
-    <button onclick="location.reload()" style="background:#34495e;">重新整理 / 鎖定</button>
+    <button onclick="location.reload()" style="background:#34495e; margin-bottom: 40px;">安全鎖定</button>
 </div>
 
 <script>
+    /* ==========================================
+       CLINICIAN SETTINGS (Change these for each patient)
+       ========================================== */
+    const CONFIG = {
+        PATIENT_PIN: "1234",
+        FLUID_LIMIT: 800,
+        PATIENT_ID: "P001" // Anonymized ID
+    };
+
+    // Initialize UI with settings
+    document.getElementById('limitDisplay').innerText = CONFIG.FLUID_LIMIT;
+    document.getElementById('displayPatientName').innerText = "患者 " + CONFIG.PATIENT_ID;
+
+    // PIN Logic
     const pinInput = document.getElementById('pinInput');
-
     pinInput.addEventListener('input', () => {
-        if (pinInput.value.length === 4) handleUnlock();
-    });
-
-    function handleUnlock() {
-        if (pinInput.value === '1234') {
+        if (pinInput.value === CONFIG.PATIENT_PIN) {
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             updateUI();
-        } else {
-            alert('PIN 錯誤');
-            pinInput.value = '';
+        } else if (pinInput.value.length >= 4) {
+            alert("PIN 錯誤");
+            pinInput.value = "";
         }
-    }
+    });
 
-    function showTab(tabId) {
+    function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        event.currentTarget.classList.add('active');
-        if(tabId === 'history') updateHistoryTable();
+        btn.classList.add('active');
+        if(tabId === 'history') renderHistory();
     }
 
     function addFluid() {
-        let val = parseInt(document.getElementById('fluidAmt').value) || 0;
+        const val = parseInt(document.getElementById('fluidAmt').value) || 0;
         if(val <= 0) return;
-        
-        let total = parseInt(localStorage.getItem('fluid_total') || 0);
-        localStorage.setItem('fluid_total', total + val);
-        
-        saveHistory('飲水', `${val} mL`);
+        let total = parseInt(localStorage.getItem('f_total') || 0);
+        localStorage.setItem('f_total', total + val);
+        logHistory('飲水', val + ' mL');
         document.getElementById('fluidAmt').value = '';
         updateUI();
     }
 
     function addFood() {
-        const name = document.getElementById('foodName').value || '未命名食物';
+        const name = document.getElementById('foodName').value || "未命名";
         const level = document.getElementById('phosLevel').value;
-        saveHistory('食物', `${name} (${level === 'high' ? '高磷' : (level === 'med' ? '中磷' : '低磷')})`);
+        const levelText = level === 'high' ? '高磷' : (level === 'med' ? '中磷' : '低磷');
+        logHistory('食物', `${name} (${levelText})`);
         document.getElementById('dietWarn').style.display = (level === 'high') ? 'block' : 'none';
         document.getElementById('foodName').value = '';
-        alert('食物已記錄');
+        alert("已紀錄");
     }
 
-    function saveHistory(type, detail) {
-        const history = JSON.parse(localStorage.getItem('health_history') || '[]');
+    function logHistory(type, detail) {
+        const hist = JSON.parse(localStorage.getItem('h_list') || '[]');
         const now = new Date();
-        const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-        history.unshift({ time: timeStr, type: type, detail: detail });
-        localStorage.setItem('health_history', JSON.stringify(history));
+        const ts = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
+        hist.unshift({ ts, type, detail });
+        localStorage.setItem('h_list', JSON.stringify(hist));
     }
 
-    function updateHistoryTable() {
-        const history = JSON.parse(localStorage.getItem('health_history') || '[]');
-        const body = document.getElementById('historyBody');
-        body.innerHTML = history.map(h => `<tr><td>${h.time}</td><td>${h.type}</td><td>${h.detail}</td></tr>`).join('');
+    function renderHistory() {
+        const hist = JSON.parse(localStorage.getItem('h_list') || '[]');
+        document.getElementById('historyBody').innerHTML = hist.map(i => 
+            `<tr><td>${i.ts}</td><td>${i.type}</td><td>${i.detail}</td></tr>`
+        ).join('');
     }
 
     function saveMeds() {
@@ -170,25 +174,22 @@
             m20: document.getElementById('m20').checked,
             m22: document.getElementById('m22').checked
         };
-        localStorage.setItem('med_records', JSON.stringify(meds));
-        alert('藥物紀錄已儲存');
+        localStorage.setItem('m_status', JSON.stringify(meds));
+        alert("紀錄成功");
     }
 
-    function clearHistory() {
-        if(confirm('確定要永久刪除所有歷史記錄嗎？')) {
-            localStorage.removeItem('health_history');
-            localStorage.setItem('fluid_total', 0);
-            updateHistoryTable();
-            updateUI();
+    function confirmClear() {
+        if(confirm("確定要刪除所有歷史記錄嗎？")) {
+            localStorage.clear();
+            location.reload();
         }
     }
 
     function updateUI() {
-        const total = localStorage.getItem('fluid_total') || 0;
+        const total = parseInt(localStorage.getItem('f_total') || 0);
         document.getElementById('totalFluid').innerText = total;
-        document.getElementById('fluidWarn').style.display = (total > 800) ? 'block' : 'none';
-        
-        const meds = JSON.parse(localStorage.getItem('med_records') || '{}');
+        document.getElementById('fluidWarn').style.display = (total > CONFIG.FLUID_LIMIT) ? 'block' : 'none';
+        const meds = JSON.parse(localStorage.getItem('m_status') || '{}');
         ['m8', 'm12', 'm20', 'm22'].forEach(id => document.getElementById(id).checked = meds[id] || false);
     }
 </script>

@@ -17,6 +17,11 @@
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
+        /* Side-by-side Buttons */
+        .pdf-btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .pdf-btn-group button { flex: 1; font-size: 0.85rem; padding: 10px 5px; }
+
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
         button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
         .progress-container { background: #fff; border-radius: 20px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden; border: 1px solid #ddd; }
@@ -103,13 +108,21 @@
         </div>
     </div>
 
+    <!-- History Tab -->
     <div id="history" class="tab-content">
-        <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載完整 PDF 報告 (分享給心理學家)</button>
+        <div class="pdf-btn-group">
+            <button onclick="exportToPDF(true)" style="background:#2980b9;">下載本月 PDF</button>
+            <button onclick="exportToPDF(false)" style="background:#34495e;">下載全部 PDF</button>
+        </div>
         <div class="card" style="padding:10px;"><table id="historyTable"><thead><tr><th style="width:35%">日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead><tbody id="historyBody"></tbody></table></div>
     </div>
 
+    <!-- Calendar Tab -->
     <div id="calendarTab" class="tab-content">
-        <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載完整 PDF 報告 (分享給心理學家)</button>
+        <div class="pdf-btn-group">
+            <button onclick="exportToPDF(true)" style="background:#2980b9;">下載本月 PDF</button>
+            <button onclick="exportToPDF(false)" style="background:#34495e;">下載全部 PDF</button>
+        </div>
         <div id="multiMonthCalendarContainer"></div>
     </div>
 
@@ -145,20 +158,17 @@
     function addFood() {
         const n = document.getElementById('foodName').value; if(!n) return;
         const c = (function(f){
-            let r = [];
-            if (HIGH_PHOS_KEYWORDS.some(k => f.includes(k))) r.push("⚠️注意高磷");
-            if (HIGH_PRO_KEYWORDS.some(k => f.includes(k))) r.push("ℹ️提醒高蛋白");
-            if (f.includes("加工")||f.includes("火腿")||f.includes("香腸")) r.push("⛔警告加工磷");
+            let r = []; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) r.push("⚠️注意高磷"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) r.push("ℹ️提醒高蛋白"); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) r.push("⛔警告加工磷");
             return r.length > 0 ? r.join("/") : "✅ 良好的選擇";
         })(n);
-        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: getSelectedLocation() };
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: (document.getElementById('userLocation').value === '其他' ? `其他(${document.getElementById('locDetail').value})` : document.getElementById('userLocation').value) };
         let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
         document.getElementById('foodName').value = ''; updateUI();
     }
 
     function addFluid() {
         const a = parseInt(document.getElementById('fluidAmt').value); if(!a) return;
-        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt: a, label: document.getElementById('fluidType').value, location: getSelectedLocation() };
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt: a, label: document.getElementById('fluidType').value, location: (document.getElementById('userLocation').value === '其他' ? `其他(${document.getElementById('locDetail').value})` : document.getElementById('userLocation').value) };
         let l = JSON.parse(localStorage.getItem('f_logs') || '[]'); l.unshift(entry); localStorage.setItem('f_logs', JSON.stringify(l));
         document.getElementById('fluidAmt').value = ''; updateUI();
     }
@@ -166,8 +176,8 @@
     function toggleMed(slot) {
         let l = JSON.parse(localStorage.getItem('m_list') || '[]'); const today = getTodayKey();
         const ex = l.find(x => x.date === today && x.timeSlot === slot);
-        if (ex) { if(confirm("取消？")) l = l.filter(x => x !== ex); }
-        else { l.unshift({ id: Date.now(), date: today, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), timeSlot: slot, location: getSelectedLocation() }); }
+        if (ex) { if(confirm("取消記錄？")) l = l.filter(x => x !== ex); }
+        else { l.unshift({ id: Date.now(), date: today, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), timeSlot: slot, location: (document.getElementById('userLocation').value === '其他' ? `其他(${document.getElementById('locDetail').value})` : document.getElementById('userLocation').value) }); }
         localStorage.setItem('m_list', JSON.stringify(l)); updateUI();
     }
 
@@ -180,24 +190,31 @@
         else { bar.classList.remove('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'none'; }
         const btns = document.getElementsByClassName('med-btn');
         MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x=>x.timeSlot===t) ? "med-btn taken" : "med-btn");
-        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'}</div>`).join('');
+        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
         document.getElementById('dailyFluidList').innerHTML = b(s.f); document.getElementById('dailyFoodList').innerHTML = b(s.d); document.getElementById('dailyMedList').innerHTML = b(s.m);
     }
 
     function renderMultiMonthCalendar() {
         const c = document.getElementById('multiMonthCalendarContainer'); c.innerHTML = '';
         const now = new Date(); const y = now.getFullYear(); const m = now.getMonth();
-        c.innerHTML += `<div class="cal-month-header">${y} 年 ${m + 1} 月</div>`;
-        const g = document.createElement('div'); g.className = 'cal-grid';
-        ["日","一","二","三","四","五","六"].forEach(w => g.innerHTML += `<div class="cal-day cal-header">${w}</div>`);
-        const first = new Date(y, m, 1).getDay(); const total = new Date(y, m + 1, 0).getDate();
-        for(let i=0; i<first; i++) g.innerHTML += `<div class="cal-day" style="background:#f9f9f9"></div>`;
-        for(let day=1; day<=total; day++) {
-            const dk = `${y}-${(m+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
-            const s = calculateDayScore(dk);
-            g.innerHTML += `<div class="cal-day"><div style="font-weight:bold">${day}</div>${s.hasData?`<div class="cal-dot" style="background:${s.color}"></div><div class="cal-note">${s.score===3?'完成晒!':s.reasons.join('<br>')}</div>`:''}</div>`;
-        }
-        c.appendChild(g);
+        const allLogs = [...JSON.parse(localStorage.getItem('f_logs')||'[]'), ...JSON.parse(localStorage.getItem('m_list')||'[]'), ...JSON.parse(localStorage.getItem('d_logs')||'[]')];
+        const allDates = [...new Set(allLogs.map(l => l.date))];
+        const my = [...new Set(allDates.map(d => { const dt = new Date(d); return `${dt.getFullYear()}/${dt.getMonth()+1}`; }))].sort((a,b) => b.localeCompare(a));
+        if(!my.length) my.push(`${y}/${m+1}`);
+        my.forEach(x => {
+            const [curY, curM] = x.split('/').map(Number);
+            c.innerHTML += `<div class="cal-month-header">${curY} 年 ${curM} 月</div>`;
+            const g = document.createElement('div'); g.className = 'cal-grid';
+            ["日","一","二","三","四","五","六"].forEach(w => g.innerHTML += `<div class="cal-day cal-header">${w}</div>`);
+            const first = new Date(curY, curM-1, 1).getDay(); const total = new Date(curY, curM, 0).getDate();
+            for(let i=0; i<first; i++) g.innerHTML += `<div class="cal-day" style="background:#f9f9f9"></div>`;
+            for(let day=1; day<=total; day++) {
+                const dk = `${curY}-${curM.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+                const s = calculateDayScore(dk);
+                g.innerHTML += `<div class="cal-day"><div style="font-weight:bold">${day}</div>${s.hasData?`<div class="cal-dot" style="background:${s.color}"></div><div class="cal-note">${s.score===3?'完成晒!':s.reasons.join('<br>')}</div>`:''}</div>`;
+            }
+            c.appendChild(g);
+        });
     }
 
     function renderHistoryTable() {
@@ -211,9 +228,17 @@
         }).join('');
     }
 
-    function exportToPDF() {
-        const allDates = [...new Set([...JSON.parse(localStorage.getItem('f_logs')||'[]'), ...JSON.parse(localStorage.getItem('d_logs')||'[]'), ...JSON.parse(localStorage.getItem('m_list')||'[]')].map(l => l.date))].sort();
-        const range = allDates.length > 0 ? `${allDates[0]} 至 ${allDates[allDates.length-1]}` : getTodayKey();
+    function exportToPDF(thisMonthOnly) {
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
+        
+        let allLogs = [...JSON.parse(localStorage.getItem('f_logs')||'[]'), ...JSON.parse(localStorage.getItem('m_list')||'[]'), ...JSON.parse(localStorage.getItem('d_logs')||'[]')];
+        if (thisMonthOnly) {
+            allLogs = allLogs.filter(l => l.date.startsWith(currentMonthKey));
+        }
+        
+        const dates = [...new Set(allLogs.map(l => l.date))].sort();
+        const range = dates.length > 0 ? `${dates[0]} 至 ${dates[dates.length-1]}` : "無紀錄";
         
         const win = window.open('', '', 'height=800,width=900');
         win.document.write(`<html><head><title>健康報告</title><style>
@@ -228,25 +253,37 @@
             .cal-note { font-size: 0.55rem; color: #666; text-align: center; }
             .day-block { margin-top: 40px; page-break-inside: avoid; border-top: 1px solid #eee; padding-top: 20px; }
         </style></head><body>
-            <h1>腎臟健康進度完整報告</h1>
+            <h1>腎臟健康進度報告 (${thisMonthOnly ? '本月' : '全部'})</h1>
             <p><strong>報告期間:</strong> ${range}</p>
             <h2>1. 指標摘要</h2>
             ${document.getElementById('historyTable').outerHTML}
             <div style="page-break-before: always;"></div>
             <h2>2. 視覺月曆回顧</h2>
-            ${document.getElementById('multiMonthCalendarContainer').innerHTML}
+            <div id="pdf-cal-container"></div>
             <div style="page-break-before: always;"></div>
             <h2>3. 詳細每日記錄細目</h2>`);
 
-        allDates.reverse().forEach(d => {
+        // Re-generate calendar for the PDF window manually
+        const pdfCalContainer = win.document.getElementById('pdf-cal-container');
+        const monthsInLog = [...new Set(allLogs.map(l => l.date.substring(0, 7)))].sort().reverse();
+        monthsInLog.forEach(mKey => {
+            const [y, m] = mKey.split('-').map(Number);
+            pdfCalContainer.innerHTML += `<div class="cal-month-header">${y} 年 ${m} 月</div>`;
+            let gHtml = `<div class="cal-grid"><div class="cal-day cal-header">日</div><div class="cal-day cal-header">一</div><div class="cal-day cal-header">二</div><div class="cal-day cal-header">三</div><div class="cal-day cal-header">四</div><div class="cal-day cal-header">五</div><div class="cal-day cal-header">六</div>`;
+            const first = new Date(y, m-1, 1).getDay(); const tot = new Date(y, m, 0).getDate();
+            for(let i=0; i<first; i++) gHtml += `<div class="cal-day" style="background:#f9f9f9"></div>`;
+            for(let d=1; d<=tot; d++) {
+                const dk = `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+                const s = calculateDayScore(dk);
+                gHtml += `<div class="cal-day"><div>${d}</div>${s.hasData ? `<div class="cal-dot" style="background:${s.color}"></div><div class="cal-note">${s.score===3?'做得好!':s.reasons.join('<br>')}</div>` : ''}</div>`;
+            }
+            gHtml += `</div>`;
+            pdfCalContainer.innerHTML += gHtml;
+        });
+
+        [...dates].reverse().forEach(d => {
             const s = calculateDayScore(d);
-            if(s.hasData) win.document.write(`
-                <div class="day-block">
-                    <h3>日期: ${d}</h3>
-                    <p><strong>💊 藥物:</strong> ${s.m.map(x=>`[${x.time}] ${x.timeSlot} @${x.location}`).join(', ') || '無'}</p>
-                    <p><strong>💧 飲水 (總計 ${s.fSum}mL):</strong><br>${s.f.map(x=>`• [${x.time}] ${x.label}: ${x.amt}mL @${x.location}`).join('<br>') || '無'}</p>
-                    <p><strong>🥗 飲食:</strong><br>${s.d.map(x=>`• [${x.time}] ${x.name} (${x.comment}) @${x.location}`).join('<br>') || '無'}</p>
-                </div>`);
+            if(s.hasData) win.document.write(`<div class="day-block"><h3>日期: ${d}</h3><p><strong>💊 藥物:</strong> ${s.m.map(x=>`[${x.time}] ${x.timeSlot} @${x.location}`).join(', ') || '無'}</p><p><strong>💧 飲水 (總計 ${s.fSum}mL):</strong><br>${s.f.map(x=>`• [${x.time}] ${x.label}: ${x.amt}mL @${x.location}`).join('<br>') || '無'}</p><p><strong>🥗 飲食:</strong><br>${s.d.map(x=>`• [${x.time}] ${x.name} (${x.comment}) @${x.location}`).join('<br>') || '無'}</p></div>`);
         });
 
         win.document.write(`</body></html>`);
@@ -255,7 +292,6 @@
     }
 
     function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
-    function getSelectedLocation() { const l = document.getElementById('userLocation').value; return l === '其他' ? `其他(${document.getElementById('locDetail').value})` : l; }
     function showTab(id, btn) { document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); if(id === 'calendarTab') renderMultiMonthCalendar(); if(id === 'history') renderHistoryTable(); }
 
     document.getElementById('pinInput').addEventListener('input', (e) => {

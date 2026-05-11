@@ -26,7 +26,6 @@
         .med-btn { background: white; color: #2c3e50; border: 2px solid #ddd; font-weight: normal; margin-bottom: 5px; font-size: 0.85rem; padding: 10px 5px; border-radius: 8px; }
         .med-btn.taken { background: #27ae60; color: white; border-color: #27ae60; }
         .entry-log-item { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.85rem; }
-        .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 8px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
         .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
         .cal-day { font-size: 0.9rem; padding: 5px 2px; border-radius: 4px; background: #fff; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; }
@@ -37,6 +36,7 @@
         th, td { padding: 10px 5px; border-bottom: 1px solid #eee; text-align: center; }
         .details-box { display: none; background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 5px; font-size: 0.85rem; text-align: left; border: 1px solid #ddd; line-height: 1.6; }
         .view-btn { background: #ecf0f1; color: #2c3e50; padding: 5px 8px; font-size: 0.75rem; border: 1px solid #bdc3c7; width: auto; display: inline-block; margin-top: 4px; }
+        .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 8px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
     </style>
 </head>
 <body>
@@ -103,12 +103,12 @@
     </div>
 
     <div id="history" class="tab-content">
-        <button onclick="window.print()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
+        <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載完整 PDF 報告 (分享給心理學家)</button>
         <div class="card" style="padding:10px;"><table id="historyTable"><thead><tr><th style="width:35%">日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead><tbody id="historyBody"></tbody></table></div>
     </div>
 
     <div id="calendarTab" class="tab-content">
-        <button onclick="window.print()" style="background:#2980b9; margin-bottom:15px;">下載為 PDF (分享給心理學家)</button>
+        <button onclick="exportToPDF()" style="background:#2980b9; margin-bottom:15px;">下載完整 PDF 報告 (分享給心理學家)</button>
         <div id="multiMonthCalendarContainer"></div>
     </div>
 
@@ -122,22 +122,7 @@
     const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "豆", "蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "可樂", "咖啡", "堅果", "罐頭"];
     const HIGH_PRO_KEYWORDS = ["雞肉", "魚", "肉", "蝦", "蟹", "海鮮"];
 
-    // Date Key Helper
-    function getTodayKey() {
-        const d = new Date();
-        return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`;
-    }
-
-    function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
-    function getSelectedLocation() { const l = document.getElementById('userLocation').value; return l === '其他' ? `其他(${document.getElementById('locDetail').value})` : l; }
-
-    function getMedicalComment(food) {
-        let comments = [];
-        if (HIGH_PHOS_KEYWORDS.some(k => food.includes(k))) comments.push("⚠️ 注意：此食物含磷較高。過多的磷會導致皮膚瘙癢和骨骼問題！");
-        if (HIGH_PRO_KEYWORDS.some(k => food.includes(k))) comments.push("ℹ️ 提醒：這是一種高蛋白質食物。請確保攝取量符合營養師的建議！");
-        if (food.includes("加工") || food.includes("火腿") || food.includes("香腸")) comments.push("⛔ 警告：加工食品含有極易被吸收的無機磷，請盡量避免。");
-        return comments.length > 0 ? comments.join("<br>") : "✅ 良好的選擇，請繼續保持～";
-    }
+    function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
 
     function calculateDayScore(dateKey) {
         const f = JSON.parse(localStorage.getItem('f_logs') || '[]').filter(l => l.date === dateKey);
@@ -158,8 +143,7 @@
 
     function addFood() {
         const n = document.getElementById('foodName').value; if(!n) return;
-        const c = getMedicalComment(n);
-        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: getSelectedLocation() };
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: getMedicalComment(n), risk: getMedicalComment(n).includes("⚠️") || getMedicalComment(n).includes("⛔"), location: getSelectedLocation() };
         let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
         document.getElementById('foodName').value = ''; updateUI();
     }
@@ -188,15 +172,8 @@
         else { bar.classList.remove('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'none'; }
         const btns = document.getElementsByClassName('med-btn');
         MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x=>x.timeSlot===t) ? "med-btn taken" : "med-btn");
-        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
+        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '屋企'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
         document.getElementById('dailyFluidList').innerHTML = b(s.f); document.getElementById('dailyFoodList').innerHTML = b(s.d); document.getElementById('dailyMedList').innerHTML = b(s.m);
-    }
-
-    function showTab(id, btn) {
-        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); btn.classList.add('active');
-        if(id === 'calendarTab') renderMultiMonthCalendar();
-        if(id === 'history') renderHistoryTable();
     }
 
     function renderMultiMonthCalendar() {
@@ -225,6 +202,49 @@
             <tr><td colspan="4"><div id="det-${id}" class="details-box">藥物: ${s.m.map(x=>x.timeSlot).join(', ') || '無'}<br>飲水: ${s.fSum}mL<br>飲食: ${s.d.map(x=>x.name).join(', ')}</div></td></tr>`;
         }).join('');
     }
+
+    function exportToPDF() {
+        const allDates = [...new Set([...JSON.parse(localStorage.getItem('f_logs')||'[]'), ...JSON.parse(localStorage.getItem('d_logs')||'[]'), ...JSON.parse(localStorage.getItem('m_list')||'[]')].map(l => l.date))].sort();
+        const range = allDates.length > 0 ? `${allDates[0]} 至 ${allDates[allDates.length-1]}` : getTodayKey();
+        
+        const win = window.open('', '', 'height=800,width=900');
+        win.document.write(`<html><head><title>健康報告</title><style>
+            body { font-family: sans-serif; padding: 30px; line-height:1.5; color:#333; }
+            h1, h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+            .day-block { margin-top: 40px; page-break-inside: avoid; border-top: 1px solid #eee; padding-top: 20px; }
+        </style></head><body>
+            <h1>腎臟健康進度完整報告</h1>
+            <p><strong>報告期間:</strong> ${range}</p>
+            <h2>1. 指標摘要 (✅=達標, ❌=未達標)</h2>
+            ${document.getElementById('historyTable').outerHTML}
+            <div style="page-break-before: always;"></div>
+            <h2>2. 視覺月曆回顧</h2>
+            ${document.getElementById('multiMonthCalendarContainer').innerHTML}
+            <div style="page-break-before: always;"></div>
+            <h2>3. 詳細每日記錄細目</h2>`);
+
+        allDates.reverse().forEach(d => {
+            const s = calculateDayScore(d);
+            if(s.hasData) win.document.write(`
+                <div class="day-block">
+                    <h3>日期: ${d}</h3>
+                    <p><strong>💊 藥物:</strong> ${s.m.map(x=>`[${x.time}] ${x.timeSlot} @${x.location}`).join(', ') || '無'}</p>
+                    <p><strong>💧 飲水 (總計 ${s.fSum}mL):</strong><br>${s.f.map(x=>`• [${x.time}] ${x.label}: ${x.amt}mL @${x.location}`).join('<br>') || '無'}</p>
+                    <p><strong>🥗 飲食:</strong><br>${s.d.map(x=>`• [${x.time}] ${x.name} (${x.comment}) @${x.location}`).join('<br>') || '無'}</p>
+                </div>`);
+        });
+
+        win.document.write(`</body></html>`);
+        win.document.close();
+        setTimeout(() => win.print(), 500);
+    }
+
+    function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
+    function getSelectedLocation() { const l = document.getElementById('userLocation').value; return l === '其他' ? `其他(${document.getElementById('locDetail').value})` : l; }
+    function getMedicalComment(f) { let c=[]; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) c.push("⚠️注意高磷"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) c.push("ℹ️提醒高蛋白"); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) c.push("⛔警告加工磷"); return c.length>0 ? c.join("/") : "✅ 良好的選擇"; }
+    function showTab(id, btn) { document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); if(id === 'calendarTab') renderMultiMonthCalendar(); if(id === 'history') renderHistoryTable(); }
 
     document.getElementById('pinInput').addEventListener('input', (e) => {
         if (e.target.value === CONFIG.PIN) {

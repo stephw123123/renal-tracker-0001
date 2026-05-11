@@ -203,7 +203,7 @@
         const n = document.getElementById('foodName').value; if(!n) return;
         const c = (function(f){
             let r = []; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) r.push("⚠️注意高磷"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) r.push("ℹ️提醒高蛋白"); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) r.push("⛔警告加工磷");
-            return r.length > 0 ? r.join("/") : "✅ 良好的選擇";
+            return r.length > 0 ? r.join("/") : "";
         })(n);
         const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: getSelectedLocation() };
         let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));

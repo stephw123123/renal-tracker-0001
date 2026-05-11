@@ -8,6 +8,8 @@
         body { font-family: -apple-system, sans-serif; background: #f4f7f9; padding: 15px; margin: 0; color: #2c3e50; }
         .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         h2 { border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; font-size: 1.1rem; }
+        .welcome-msg { color: #3498db; font-weight: bold; margin-bottom: 5px; font-size: 1.1rem; text-align: center; }
+        .summary-msg { background: #e3f2fd; padding: 12px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 20px; border-left: 4px solid #2196f3; color: #0d47a1; }
         .tabs { display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
         .tab-btn { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: #3498db; color: white; }
@@ -38,13 +40,16 @@
 </div>
 
 <div id="mainApp" style="display:none;">
+    <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
+    <div id="yesterdaySummary" class="summary-msg">正在分析昨天的進度...</div>
+
     <div class="tabs">
         <button class="tab-btn active" onclick="showTab('tracker', this)">今日記錄</button>
         <button class="tab-btn" onclick="showTab('history', this)">歷史回顧</button>
     </div>
 
     <div id="tracker" class="tab-content active">
-        <!-- 1. Food Entry First -->
+        <!-- 1. Food Analysis -->
         <div class="card">
             <h2>🥗 自動飲食分析</h2>
             <input type="text" id="foodName" placeholder="請輸入食物 (如：牛肉、香腸)">
@@ -52,7 +57,7 @@
             <div id="dailyFoodList"></div>
         </div>
 
-        <!-- 2. Medication Next -->
+        <!-- 2. Medication -->
         <div class="card">
             <h2>💊 藥物狀態 (自動儲存)</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -63,14 +68,14 @@
             </div>
         </div>
 
-        <!-- 3. Fluid Last -->
+        <!-- 3. Fluid -->
         <div class="card">
             <h2>💧 飲水進度 (<span id="curTotal">0</span>/800mL)</h2>
             <div class="progress-container"><div id="progressBar"></div></div>
             <div style="display:flex; gap:5px;">
                 <input type="number" id="fluidAmt" placeholder="mL" style="width:80px;">
                 <select id="fluidType" onchange="toggleFluidNote()">
-                    <option value="水">白開水</option>
+                    <option value="水">水</option>
                     <option value="其他">其他</option>
                 </select>
             </div>
@@ -91,7 +96,7 @@
         </div>
     </div>
 
-    <button onclick="location.reload()" style="background:#34495e; margin-top:20px; margin-bottom:40px;">安全鎖定</button>
+    <button onclick="location.reload()" style="background:#34495e; margin-top:20px; margin-bottom:40px;">登出</button>
 </div>
 
 <script>
@@ -111,9 +116,40 @@
         if (e.target.value === CONFIG.PIN) {
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
+            generateYesterdaySummary();
             updateUI();
         }
     });
+
+    function generateYesterdaySummary() {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yStr = yesterday.toLocaleDateString();
+
+        const fLogs = JSON.parse(localStorage.getItem('f_logs') || '[]');
+        const dLogs = JSON.parse(localStorage.getItem('d_logs') || '[]');
+        const mLogs = JSON.parse(localStorage.getItem('m_logs') || '{}');
+
+        const yFluid = fLogs.filter(l => l.date === yStr).reduce((s, l) => s + l.amt, 0);
+        const yDietRisk = dLogs.filter(l => l.date === yStr).some(l => l.risk);
+        const yMeds = mLogs[yStr] || {};
+        const yMedSuccess = yMeds.m8 && yMeds.m12 && yMeds.m20 && yMeds.m22;
+
+        const fOk = yFluid >= 700 && yFluid <= 800;
+        const dOk = dLogs.filter(l => l.date === yStr).length > 0 && !yDietRisk;
+
+        const summaryDiv = document.getElementById('yesterdaySummary');
+        if (fOk && dOk && yMedSuccess) {
+            summaryDiv.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
+        } else {
+            let feedback = "昨天你沒有拿到所有的 ✅！我們注意到：";
+            if (!yMedSuccess) feedback += " 藥物紀錄不齊全...";
+            if (yDietRisk) feedback += " 飲食含高磷風險！";
+            if (!fOk) feedback += ` 飲水量為 ${yFluid}mL...`;
+            feedback += " 今天我們重新開始，一起加油！💪";
+            summaryDiv.innerHTML = feedback;
+        }
+    }
 
     function showTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -145,7 +181,14 @@
     function addFood() {
         const name = document.getElementById('foodName').value;
         if (!name) return;
-        const entry = { id: Date.now(), date: getToday(), name, comment: getMedicalComment(name), risk: getMedicalComment(name).includes("⚠️") || getMedicalComment(name).includes("⛔") };
+        const entry = { 
+            id: Date.now(), 
+            date: getToday(), 
+            time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+            name, 
+            comment: getMedicalComment(name), 
+            risk: getMedicalComment(name).includes("⚠️") || getMedicalComment(name).includes("⛔") 
+        };
         let logs = JSON.parse(localStorage.getItem('d_logs') || '[]');
         logs.unshift(entry);
         localStorage.setItem('d_logs', JSON.stringify(logs));
@@ -200,7 +243,7 @@
 
         document.getElementById('dailyFoodList').innerHTML = dLogs.map(d => `
             <div class="entry-item">
-                <strong>${d.name}</strong>
+                <strong>[${d.time}] ${d.name}</strong>
                 <div class="medical-comment">${d.comment}</div>
                 <div class="action-btns">
                     <button class="btn-edit" onclick="editItem('d_logs', ${d.id})">修改</button>

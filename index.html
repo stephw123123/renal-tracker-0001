@@ -3,34 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>腎臟健康日誌 - 進階版</title>
+    <title>腎臟健康智能日誌</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; padding: 15px; margin: 0; color: #2c3e50; }
+        body { font-family: -apple-system, sans-serif; background: #f4f7f9; padding: 15px; margin: 0; color: #2c3e50; }
         .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         h2 { border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 0; font-size: 1.1rem; }
         
-        /* Tabs */
+        /* Tabs & Progress Bar */
         .tabs { display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
         .tab-btn { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
-        /* Progress Bar */
         .progress-container { background: #eee; border-radius: 20px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden; }
         #progressBar { background: #3498db; height: 100%; width: 0%; transition: width 0.5s ease; }
         .limit-reached { background-color: #e74c3c !important; }
 
-        /* Entry Items */
-        .entry-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dotted #ccc; font-size: 0.9rem; }
+        /* Entry & History Layout */
+        .entry-item { border-bottom: 1px dotted #ccc; padding: 10px 0; font-size: 0.9rem; }
+        .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 5px 10px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
         button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        
-        /* History Table */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
         th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
-        .tick { color: #27ae60; font-weight: bold; font-size: 1.2rem; }
-        .cross { color: #e74c3c; }
-
+        
         #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
     </style>
 </head>
@@ -56,55 +51,60 @@
             <div style="display:flex; gap:5px;">
                 <input type="number" id="fluidAmt" placeholder="mL" style="width:70px; padding:10px;">
                 <select id="fluidType" style="flex-grow:1; padding:10px;">
-                    <option value="水">水</option>
-                    <option value="湯">湯</option>
+                    <option value="水">白開水</option>
+                    <option value="湯">湯/羹</option>
                     <option value="茶/咖啡">茶/咖啡</option>
-                    <option value="其他">其他</option>
+                    <option value="其他">其他液體</option>
                 </select>
             </div>
             <button onclick="addFluid()">新增記錄</button>
-            <div id="dailyEntries" style="margin-top:10px;"></div>
+            <div id="dailyFluidList" style="margin-top:10px;"></div>
         </div>
 
         <div class="card">
-            <h2>🥗 飲食磷含量</h2>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="foodName" placeholder="食物名稱" style="flex-grow:1; padding:10px;">
-                <select id="phosLevel" style="padding:10px;">
-                    <option value="low">低 ✅</option>
-                    <option value="high">高 ❌</option>
-                </select>
-            </div>
-            <button onclick="addFood()" style="background:#f39c12;">紀錄飲食</button>
+            <h2>🥗 自動飲食分析</h2>
+            <input type="text" id="foodName" placeholder="請輸入食物 (例如：牛肉、牛奶、香蕉)" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px;">
+            <button onclick="addFood()" style="background:#f39c12;">紀錄並分析</button>
+            <div id="dailyFoodList" style="margin-top:10px;"></div>
         </div>
 
         <div class="card">
-            <h2>💊 藥物紀錄</h2>
+            <h2>💊 藥物狀態</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                 <label><input type="checkbox" id="m8"> 08:00</label>
                 <label><input type="checkbox" id="m12"> 12:00</label>
                 <label><input type="checkbox" id="m20"> 20:00</label>
                 <label><input type="checkbox" id="m22"> 22:00</label>
             </div>
-            <button onclick="saveMeds()" style="background:#27ae60;">儲存藥物狀態</button>
+            <button onclick="saveMeds()" style="background:#27ae60;">儲存進度</button>
         </div>
     </div>
 
     <div id="history" class="tab-content">
         <div class="card">
-            <h2>📋 每日表現回顧</h2>
+            <h2>📋 每日成功指標</h2>
             <table id="historyTable">
                 <thead><tr><th>日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead>
                 <tbody id="historyBody"></tbody>
             </table>
-            <p style="font-size:0.8rem; color:#666; margin-top:15px;">* 飲水需介於 700-800mL 即可獲得 ✅</p>
+            <p style="font-size:0.75rem; color:#666; margin-top:15px;">✅ 成功指標：藥物全服、飲水700-800mL、飲食無高磷風險。</p>
         </div>
     </div>
-
-    <button onclick="location.reload()" style="background:#34495e; margin-top:20px;">安全鎖定</button>
 </div>
 
 <script>
+    /* --- Medical Knowledge Base --- */
+    const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "豆", "蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "可樂", "咖啡", "堅果", "罐頭"];
+    const HIGH_PRO_KEYWORDS = ["雞肉", "魚", "肉", "蝦", "蟹", "海鮮"];
+
+    function getMedicalComment(food) {
+        let comments = [];
+        if (HIGH_PHOS_KEYWORDS.some(k => food.includes(k))) comments.push("⚠️ 注意：此食物含磷較高。過多的磷會導致皮膚瘙癢和骨骼問題。");
+        if (HIGH_PRO_KEYWORDS.some(k => food.includes(k))) comments.push("ℹ️ 提醒：這是一種高蛋白質食物。請確保攝取量符合營養師的建議。");
+        if (food.includes("加工") || food.includes("火腿") || food.includes("香腸")) comments.push("⛔ 警告：加工食品含有極易被吸收的無機磷，請盡量避免。");
+        return comments.length > 0 ? comments.join("<br>") : "✅ 良好的選擇，請繼續保持。";
+    }
+
     const pinInput = document.getElementById('pinInput');
     pinInput.addEventListener('input', () => { if (pinInput.value === '1234') { document.getElementById('pinOverlay').style.display='none'; document.getElementById('mainApp').style.display='block'; updateUI(); } });
 
@@ -121,7 +121,7 @@
     function addFluid() {
         const amt = parseInt(document.getElementById('fluidAmt').value);
         if (!amt || amt <= 0) return;
-        const entry = { date: getToday(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), amt, type: document.getElementById('fluidType').value };
+        const entry = { date: getToday(), time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), amt, type: document.getElementById('fluidType').value };
         const data = JSON.parse(localStorage.getItem('fluid_logs') || '[]');
         data.unshift(entry);
         localStorage.setItem('fluid_logs', JSON.stringify(data));
@@ -130,14 +130,15 @@
     }
 
     function addFood() {
-        const name = document.getElementById('foodName').value || "食物";
-        const level = document.getElementById('phosLevel').value;
-        const entry = { date: getToday(), name, level };
+        const name = document.getElementById('foodName').value;
+        if (!name) return;
+        const comment = getMedicalComment(name);
+        const entry = { date: getToday(), name, comment, risk: comment.includes("⚠️") || comment.includes("⛔") };
         const data = JSON.parse(localStorage.getItem('diet_logs') || '[]');
         data.unshift(entry);
         localStorage.setItem('diet_logs', JSON.stringify(data));
         document.getElementById('foodName').value = '';
-        alert("已紀錄");
+        updateUI();
     }
 
     function saveMeds() {
@@ -145,42 +146,40 @@
         const allMeds = JSON.parse(localStorage.getItem('med_logs') || '{}');
         allMeds[getToday()] = meds;
         localStorage.setItem('med_logs', JSON.stringify(allMeds));
-        alert("藥物紀錄已儲存");
+        alert("儲存成功");
     }
 
     function updateUI() {
-        const logs = JSON.parse(localStorage.getItem('fluid_logs') || '[]');
-        const todayLogs = logs.filter(l => l.date === getToday());
-        const total = todayLogs.reduce((s, l) => s + l.amt, 0);
+        const fLogs = JSON.parse(localStorage.getItem('fluid_logs') || '[]').filter(l => l.date === getToday());
+        const dLogs = JSON.parse(localStorage.getItem('diet_logs') || '[]').filter(l => l.date === getToday());
+        const total = fLogs.reduce((s, l) => s + l.amt, 0);
+        
         document.getElementById('curTotal').innerText = total;
         const bar = document.getElementById('progressBar');
         bar.style.width = Math.min((total/800)*100, 100) + '%';
         bar.className = total > 800 ? 'limit-reached' : '';
-        
-        document.getElementById('dailyEntries').innerHTML = todayLogs.map(l => `<div class="entry-item"><span>${l.time} ${l.type}</span><strong>${l.amt}mL</strong></div>`).join('');
+
+        document.getElementById('dailyFluidList').innerHTML = fLogs.map(l => `<div class="entry-item"><span>${l.time} ${l.type}</span><strong>${l.amt}mL</strong></div>`).join('');
+        document.getElementById('dailyFoodList').innerHTML = dLogs.map(d => `<div class="entry-item"><strong>${d.name}</strong><div class="medical-comment">${d.comment}</div></div>`).join('');
         
         const meds = JSON.parse(localStorage.getItem('med_logs') || '{}')[getToday()] || {};
         ['m8', 'm12', 'm20', 'm22'].forEach(id => document.getElementById(id).checked = meds[id] || false);
     }
 
     function renderHistory() {
-        const fluidLogs = JSON.parse(localStorage.getItem('fluid_logs') || '[]');
-        const dietLogs = JSON.parse(localStorage.getItem('diet_logs') || '[]');
-        const medLogs = JSON.parse(localStorage.getItem('med_logs') || '{}');
-        
-        const dates = [...new Set([...fluidLogs.map(l=>l.date), ...dietLogs.map(l=>l.date), ...Object.keys(medLogs)])].sort().reverse();
-        
+        const fLogs = JSON.parse(localStorage.getItem('fluid_logs') || '[]');
+        const dLogs = JSON.parse(localStorage.getItem('diet_logs') || '[]');
+        const mLogs = JSON.parse(localStorage.getItem('med_logs') || '{}');
+        const dates = [...new Set([...fLogs.map(l=>l.date), ...dLogs.map(l=>l.date), ...Object.keys(mLogs)])].sort().reverse();
+
         document.getElementById('historyBody').innerHTML = dates.map(d => {
-            const dayFluid = fluidLogs.filter(l => l.date === d).reduce((s, l) => s + l.amt, 0);
-            const fluidTick = (dayFluid >= 700 && dayFluid <= 800) ? '✅' : '❌';
-            
-            const dayDiet = dietLogs.filter(l => l.date === d);
-            const dietTick = (dayDiet.length > 0 && !dayDiet.some(l => l.level === 'high')) ? '✅' : '❌';
-            
-            const m = medLogs[d] || {};
+            const fSum = fLogs.filter(l => l.date === d).reduce((s, l) => s + l.amt, 0);
+            const fluidTick = (fSum >= 700 && fSum <= 800) ? '✅' : '❌';
+            const dietRisk = dLogs.filter(l => l.date === d).some(l => l.risk);
+            const dietTick = (dLogs.filter(l=>l.date===d).length > 0 && !dietRisk) ? '✅' : '❌';
+            const m = mLogs[d] || {};
             const medTick = (m.m8 && m.m12 && m.m20 && m.m22) ? '✅' : '❌';
-            
-            return `<tr><td>${d.split('/')[1]}/${d.split('/')[2]}</td><td>${medTick}</td><td>${fluidTick}</td><td>${dietTick}</td></tr>`;
+            return `<tr><td>${d}</td><td>${medTick}</td><td>${fluidTick}</td><td>${dietTick}</td></tr>`;
         }).join('');
     }
 </script>

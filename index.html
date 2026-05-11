@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的健康日誌</title>
+    <!-- Add Manifest for iOS Notification Support -->
+    <link rel="manifest" href="manifest.json">
     <style>
         body { font-family: -apple-system, sans-serif; background: #f4f7f9; padding: 15px; margin: 0; color: #2c3e50; }
         .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative; }
@@ -17,40 +19,28 @@
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
-        /* Notification Banner */
         .notify-banner { background: #fffde7; border: 1px solid #fff59d; padding: 10px; border-radius: 10px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; }
         .btn-notify { background: #fbc02d; color: #333; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-
-        /* PDF Buttons */
-        .pdf-btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .pdf-btn-group button { flex: 1; font-size: 0.8rem; padding: 10px 5px; font-weight: bold; }
-
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
         button { background: #3498db; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
         .progress-container { background: #fff; border-radius: 20px; height: 20px; width: 100%; margin: 10px 0; overflow: hidden; border: 1px solid #ddd; }
         #progressBar { background: #3498db; height: 100%; width: 0%; transition: width 0.5s ease; }
         #progressBar.over-limit { background: #e74c3c !important; }
         .fluid-warn-msg { color: #e74c3c; font-weight: bold; text-align: center; font-size: 0.9rem; margin-top: 5px; display: none; }
-        
         .med-btn { background: white; color: #2c3e50; border: 2px solid #ddd; font-weight: normal; margin-bottom: 5px; font-size: 0.85rem; padding: 10px 5px; border-radius: 8px; }
         .med-btn.taken { background: #27ae60; color: white; border-color: #27ae60; }
         .entry-log-item { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.85rem; }
         .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 8px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
-        
-        /* Calendar UI */
-        .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-        .cal-day { font-size: 0.9rem; padding: 5px 2px; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; background:#fff; }
-        .cal-header { font-weight: bold; background: #f1f2f6 !important; min-height: 25px !important; font-size: 0.75rem; }
-        .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; border: 1px solid rgba(0,0,0,0.1); }
-        .cal-note { font-size: 0.55rem; color: #666; line-height: 1.1; text-align: center; }
-        
         #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; font-size: 0.85rem; }
         th, td { padding: 10px 5px; border-bottom: 1px solid #eee; text-align: center; }
         .details-box { display: none; background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 5px; font-size: 0.85rem; text-align: left; border: 1px solid #ddd; line-height: 1.6; }
         .view-btn { background: #ecf0f1; color: #2c3e50; padding: 5px 8px; font-size: 0.75rem; border: 1px solid #bdc3c7; width: auto; display: inline-block; margin-top: 4px; }
+        .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-day { font-size: 0.9rem; padding: 5px 2px; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; background:#fff; }
+        .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; -webkit-print-color-adjust: exact; }
+        .cal-note { font-size: 0.55rem; color: #666; text-align: center; }
     </style>
 </head>
 <body>
@@ -66,7 +56,6 @@
     <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
     <div id="yesterdaySummary" class="summary-msg">正在分析昨日進度...</div>
 
-    <!-- Notification Setup Banner -->
     <div class="notify-banner">
         🔔 想在用藥時間收到提醒嗎？<br>
         <button class="btn-notify" onclick="setupNotifications()">開啟提醒功能</button>
@@ -79,7 +68,6 @@
     </div>
 
     <div id="tracker" class="tab-content active">
-        <!-- 📍 Location Section -->
         <div class="card" style="border: 2px solid #3498db;">
             <h2 style="border:none;">📍 我現在在哪裡？</h2>
             <select id="userLocation" onchange="toggleLocDetail()">
@@ -94,7 +82,7 @@
 
         <div class="card food-section">
             <h2>🥗 自動飲食分析</h2>
-            <input type="text" id="foodName" placeholder="輸入食物 (如：牛肉、香腸)">
+            <input type="text" id="foodName" placeholder="輸入食物">
             <button onclick="addFood()" style="background:#689f38;">紀錄並分析</button>
             <div id="dailyFoodList" style="margin-top:10px;"></div>
         </div>
@@ -123,7 +111,6 @@
         </div>
     </div>
 
-    <!-- History Tab -->
     <div id="history" class="tab-content">
         <div class="pdf-btn-group">
             <button onclick="exportToPDF(true)" style="background:#2980b9;">下載本月 PDF</button>
@@ -132,7 +119,6 @@
         <div class="card" style="padding:10px;"><table id="historyTable"><thead><tr><th style="width:35%">日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead><tbody id="historyBody"></tbody></table></div>
     </div>
 
-    <!-- Calendar Tab -->
     <div id="calendarTab" class="tab-content">
         <div class="pdf-btn-group">
             <button onclick="exportToPDF(true)" style="background:#2980b9;">下載本月 PDF</button>
@@ -151,9 +137,51 @@
     const HIGH_PHOS_KEYWORDS = ["牛奶", "乳酪", "起司", "豆", "蛋黃", "牛肉", "豬肉", "內臟", "巧克力", "可樂", "咖啡", "堅果", "罐頭"];
     const HIGH_PRO_KEYWORDS = ["雞肉", "魚", "肉", "蝦", "蟹", "海鮮"];
 
-    // Date/Scoring Logic
+    // Register Service Worker for Notifications
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('Service Worker registered');
+            }).catch(err => {
+                console.log('Service Worker registration failed', err);
+            });
+        });
+    }
+
     function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
-    
+
+    function setupNotifications() {
+        if (!("Notification" in window)) {
+            alert("此瀏覽器不支援通知功能。如果您是使用 iPhone，請先點擊分享並『加入主畫面』後從桌面圖示進入。");
+            return;
+        }
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                alert("提醒功能已開啟！系統將於用藥時間提醒您。");
+                startReminderCheck();
+            } else {
+                alert("您拒絕了通知權限，請在系統設定中重新開啟。");
+            }
+        });
+    }
+
+    function startReminderCheck() {
+        setInterval(() => {
+            const now = new Date();
+            const t = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+            if (["08:00", "12:00", "20:00", "22:00"].includes(t)) {
+                const today = getTodayKey();
+                const m = JSON.parse(localStorage.getItem('m_list') || '[]').filter(l => l.date === today);
+                if (!m.some(l => l.timeSlot.startsWith(t))) {
+                    new Notification("💊 藥物記錄提醒", {
+                        body: `現在是 ${t}，記得記錄您的藥物喔！`,
+                        icon: "https://github.io"
+                    });
+                }
+            }
+        }, 60000);
+    }
+
     function calculateDayScore(dateKey) {
         const f = JSON.parse(localStorage.getItem('f_logs') || '[]').filter(l => l.date === dateKey);
         const d = JSON.parse(localStorage.getItem('d_logs') || '[]').filter(l => l.date === dateKey);
@@ -171,36 +199,12 @@
         return { score, color, reasons, hasData, f, d, m, fSum, mOk, fOk, dOk };
     }
 
-    // Restored Notification Logic
-    function setupNotifications() {
-        if (!("Notification" in window)) { alert("瀏覽器不支援"); return; }
-        Notification.requestPermission().then(p => { if(p === "granted") { alert("已開啟提醒！"); startReminderCheck(); } });
-    }
-
-    function startReminderCheck() {
-        setInterval(() => {
-            const t = new Date().getHours().toString().padStart(2,'0')+":"+new Date().getMinutes().toString().padStart(2,'0');
-            if(["08:00","12:00","20:00","22:00"].includes(t)) checkAndNotify(t);
-        }, 60000);
-    }
-
-    function checkAndNotify(t) {
-        const today = getTodayKey();
-        const m = JSON.parse(localStorage.getItem('m_list') || '[]').filter(l => l.date === today);
-        if(!m.some(l => l.timeSlot.startsWith(t)) && Notification.permission === "granted") {
-            new Notification("💊 健康日誌", { body: `現在是 ${t}，記得記錄藥物喔！` });
-        }
-    }
-
-    // CRUD
-    function getMedicalComment(f) {
-        let c=[]; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) c.push("⚠️注意高磷"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) c.push("ℹ️提醒高蛋白"); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) c.push("⛔警告加工磷");
-        return c.length>0 ? c.join("/") : "✅ 良好的選擇";
-    }
-
     function addFood() {
         const n = document.getElementById('foodName').value; if(!n) return;
-        const c = getMedicalComment(n);
+        const c = (function(f){
+            let r = []; if(HIGH_PHOS_KEYWORDS.some(k=>f.includes(k))) r.push("⚠️注意高磷"); if(HIGH_PRO_KEYWORDS.some(k=>f.includes(k))) r.push("ℹ️提醒高蛋白"); if(f.includes("加工")||f.includes("火腿")||f.includes("香腸")) r.push("⛔警告加工磷");
+            return r.length > 0 ? r.join("/") : "✅ 良好的選擇";
+        })(n);
         const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⚠️") || c.includes("⛔"), location: getSelectedLocation() };
         let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
         document.getElementById('foodName').value = ''; updateUI();
@@ -230,7 +234,7 @@
         else { bar.classList.remove('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'none'; }
         const btns = document.getElementsByClassName('med-btn');
         MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x=>x.timeSlot===t) ? "med-btn taken" : "med-btn");
-        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '屋企'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
+        const b = (l) => l.map(x => `<div class="entry-log-item">[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt?x.amt+'mL':''} @${x.location || '未註明'} ${x.comment?`<div class="medical-comment">${x.comment}</div>`:''}</div>`).join('');
         document.getElementById('dailyFluidList').innerHTML = b(s.f); document.getElementById('dailyFoodList').innerHTML = b(s.d); document.getElementById('dailyMedList').innerHTML = b(s.m);
     }
 
@@ -269,7 +273,7 @@
     }
 
     function exportToPDF(thisMonthOnly) {
-        const allLogs = [...JSON.parse(localStorage.getItem('f_logs')||'[]'), ...JSON.parse(localStorage.getItem('m_list')||'[]'), ...JSON.parse(localStorage.getItem('d_logs')||'[]')];
+        const allLogs = [...JSON.parse(localStorage.getItem('f_logs')||'[]'), ...JSON.parse(localStorage.getItem('d_logs')||'[]'), ...JSON.parse(localStorage.getItem('m_list')||'[]')];
         const dates = [...new Set(allLogs.map(l => l.date))].sort();
         const win = window.open('', '', 'height=800,width=900');
         win.document.write(`<html><head><title>健康報告</title><style>
@@ -283,34 +287,20 @@
             .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; -webkit-print-color-adjust: exact; }
             .day-block { margin-top: 40px; page-break-inside: avoid; border-top: 1px solid #eee; padding-top: 20px; }
         </style></head><body>
-            <h1>腎臟健康完整報告</h1>
-            <h2>1. 指標摘要</h2>
+            <h1>腎臟健康進度報告</h1>
             ${document.getElementById('historyTable').outerHTML}
             <div style="page-break-before: always;"></div>
-            <h2>2. 視覺月曆回顧</h2>
-            <div id="pdf-cal"></div>
+            ${document.getElementById('multiMonthCalendarContainer').innerHTML}
             <div style="page-break-before: always;"></div>
-            <h2>3. 詳細記錄細目</h2>`);
-
-        const mLog = [...new Set(allLogs.map(l => l.date.substring(0, 7)))].sort().reverse();
-        const calC = win.document.getElementById('pdf-cal');
-        mLog.forEach(mk => {
-            const [y, m] = mk.split('-').map(Number);
-            calC.innerHTML += `<div class="cal-month-header">${y} 年 ${m} 月</div><div class="cal-grid"><div class="cal-day cal-header">日</div><div class="cal-day cal-header">一</div><div class="cal-day cal-header">二</div><div class="cal-day cal-header">三</div><div class="cal-day cal-header">四</div><div class="cal-day cal-header">五</div><div class="cal-day cal-header">六</div>`;
-            const first = new Date(y, m-1, 1).getDay(); const tot = new Date(y, m, 0).getDate();
-            for(let i=0; i<first; i++) calC.innerHTML += `<div class="cal-day" style="background:#f9f9f9"></div>`;
-            for(let d=1; d<=tot; d++) {
-                const s = calculateDayScore(`${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`);
-                calC.innerHTML += `<div class="cal-day"><div>${d}</div>${s.hasData ? `<div class="cal-dot" style="background:${s.color}"></div>` : ''}</div>`;
-            }
-            calC.innerHTML += `</div>`;
-        });
+            <h2>詳細記錄細目</h2>`);
 
         dates.reverse().forEach(d => {
-            const s = calculateDayScore(d); if(s.hasData) win.document.write(`<div class="day-block"><h3>日期: ${d}</h3><p><strong>💊 藥物:</strong> ${s.m.map(x=>`[${x.time}] ${x.timeSlot} @${x.location}`).join(', ')}</p><p><strong>💧 飲水:</strong> ${s.fSum}mL</p><p><strong>🥗 飲食:</strong> ${s.d.map(x=>`• ${x.name}`).join('<br>')}</p></div>`);
+            const s = calculateDayScore(d);
+            if(s.hasData) win.document.write(`<div class="day-block"><h3>日期: ${d}</h3><p>💊 藥物: ${s.m.map(x=>`[${x.time}] ${x.timeSlot}`).join(', ')}</p><p>💧 飲水: ${s.fSum}mL</p><p>🥗 飲食: ${s.d.map(x=>x.name).join(', ')}</p></div>`);
         });
 
-        win.document.write(`</body></html>`); win.document.close();
+        win.document.write(`</body></html>`);
+        win.document.close();
         setTimeout(() => win.print(), 800);
     }
 
@@ -329,7 +319,6 @@
             if(!s.hasData) div.innerHTML = "今天是新的一天！💪";
             else if(s.score === 3) div.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
             else div.innerHTML = `昨天你沒有拿到所有的 ✅！注意：${s.reasons.join('、')}。繼續加油！💪`;
-            if (Notification.permission === "granted") startReminderCheck();
         }
     });
 </script>

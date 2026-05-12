@@ -1,8 +1,8 @@
 {
   "name": "我的健康日誌",
   "short_name": "健康日誌",
-  "start_url": "index.html",
-  "scope": "./",
+  "start_url": "/renal-tracker-0001/index.html",
+  "scope": "/renal-tracker-0001/",
   "display": "standalone",
   "background_color": "#f4f7f9",
   "theme_color": "#3498db",

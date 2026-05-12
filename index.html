@@ -167,31 +167,14 @@
 
     // 2. NOTIFICATION SETUP (Force Success Fix + 10-Sec Test)
     function setupNotifications() {
-        if (!("Notification" in window) || !("serviceWorker" in navigator)) {
-            alert("此設備不支援。請確保已『加入主畫面』並從桌面圖示開啟。");
-            return;
-        }
-
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                alert("✅ 權限已開啟！\n\n系統將在 10 秒後發送測試提醒。\n\n請【現在立刻鎖上螢幕】。");
-                
-                // Use the Service Worker to bypass the "Sleep" mode
-                setTimeout(() => {
-                    navigator.serviceWorker.ready.then(registration => {
-                        registration.active.postMessage({
-                            type: 'SHOW_NOTIFICATION',
-                            title: '✅ 測試成功！',
-                            body: '提醒功能運作正常。我們會定時提醒您服藥喔！'
-                        });
-                    });
-                }, 10000);
-
-                startReminderCheck();
-            } else if (permission === "denied") {
-                alert("❌ 權限被拒絕。請至 iPhone『設定』>『通知』重新開啟。");
-            }
-        });
+        const guideMsg = `🔔 如何設定服藥提醒：\n\n` +
+            `由於 iPhone 的隱私保護限制，建議你設定手機內建的『鬧鐘』以獲得最穩定的提醒：\n\n` +
+            `1. 打開手機『時鐘 (Clock)』App\n` +
+            `2. 設定 4 個鬧鐘：08:00, 12:00, 20:00, 22:00\n` +
+            `3. 將標籤命名為『填寫健康日誌』\n\n` +
+            `當你看到鬧鐘時，點擊桌面圖示進入，若漏填紀錄，上方會出現橘色警告提醒你服藥！`;
+        
+        alert(guideMsg);
     }
 
     function startReminderCheck() {
@@ -210,7 +193,7 @@
         const today = getTodayKey();
         const m = JSON.parse(localStorage.getItem('m_list') || '[]');
         if (!m.some(l => l.date === today && l.timeSlot.startsWith(prefix)) && Notification.permission === "granted") {
-            new Notification("💊 藥物記錄提醒", { body: `已經過了 ${prefix}，還沒看到您的服藥紀錄喔！`, requireInteraction: true });
+            new Notification("💊 藥物記錄提醒", { body: `已經過了 ${prefix}，還沒看到你的服藥紀錄喔！`, requireInteraction: true });
         }
     }
 

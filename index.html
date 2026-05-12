@@ -221,8 +221,13 @@
         const today = getTodayKey();
         const mLogs = JSON.parse(localStorage.getItem('m_list') || '[]');
         const alreadyTaken = mLogs.some(l => l.date === today && l.timeSlot.startsWith(timeSlotPrefix));
+    
         if (!alreadyTaken && Notification.permission === "granted") {
-            new Notification("💊 藥物記錄提醒", { body: `已經過了 ${timeSlotPrefix}，還沒看到您的服藥紀錄喔！` });
+            new Notification("💊 藥物記錄提醒", { 
+                body: `已經過了 ${timeSlotPrefix}，記得記錄您的藥物喔！`,
+                requireInteraction: true, // Forces the notification to stay on screen
+                badge: 1 // Adds the little red number to the icon (on some devices)
+            });
         }
     }
 

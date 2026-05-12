@@ -155,37 +155,45 @@
     const HIGH_PHOS_KEYWORDS = ["奶", "乳酪", "起司", "芝士", "蛋黃", "內臟", "巧克力", "朱古力", "可樂", "咖啡", "堅果", "罐頭", "即食麵"];
     const HIGH_PRO_KEYWORDS = ["雞", "魚", "肉", "豬", "牛", "蝦", "蟹", "海鮮"];
 
-    // 💧 Toggle Fluid Note
-    function toggleFluidNote() {
-        const type = document.getElementById('fluidType').value;
-        document.getElementById('fluidNote').style.display = (type === '其他') ? 'block' : 'none';
-    }
-
-    // 1. PIN LOGIN
+    // 1. PIN LOGIN & INITIAL LOAD
     document.getElementById('pinInput').addEventListener('input', (e) => {
         if (e.target.value === CONFIG.PIN) {
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             updateUI(); 
-            const yDate = new Date(); yDate.setDate(yDate.getDate()-1);
-            const yKey = `${yDate.getFullYear()}-${(yDate.getMonth()+1).toString().padStart(2,'0')}-${yDate.getDate().toString().padStart(2,'0')}`;
-            const s = calculateDayScore(yKey); const div = document.getElementById('yesterdaySummary');
-            if(!s.hasData) div.innerHTML = "今天是新的一天！💪";
-            else if(s.score === 3) div.innerHTML = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
-            else div.innerHTML = `昨天你沒有拿到所有的 ✅！<br><b>注意：</b>${s.reasons.join('、')}。繼續加油！💪`;
             if (Notification.permission === "granted") startReminderCheck();
         }
     });
 
-    // 2. NOTIFICATIONS
+    // 2. NOTIFICATION SETUP (Force Success Fix + 10-Sec Test)
     function setupNotifications() {
-        if (!("Notification" in window)) { alert("此設備不支援"); return; }
-        Notification.requestPermission().then(p => {
-            if(p === "granted") {
-                new Notification("✅ 提醒已啟動", { body: "藥物提醒功能現已生效！" });
-                startReminderCheck();
-            }
-        });
+        if (!("Notification" in window)) {
+            alert("此設備不支援通知。請確保已『加入主畫面』並從桌面圖示開啟。");
+            return;
+        }
+
+        const runTest = () => {
+            alert("✅ 提醒功能已啟動！\n\n為了測試功能，系統將在 10 秒後發送一個測試提醒。\n\n請【現在立刻關閉 App 或鎖上螢幕】來測試接收。");
+            setTimeout(() => {
+                new Notification("✅ 測試成功！", { 
+                    body: "看到這個訊息，代表您的藥物提醒功能運作正常。我們會定時提醒您服藥喔！",
+                    requireInteraction: true 
+                });
+            }, 10000);
+            startReminderCheck();
+        };
+
+        if (Notification.permission === "granted") {
+            runTest(); // If already allowed, just run the test
+        } else {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    runTest();
+                } else if (permission === "denied") {
+                    alert("❌ 通知權限被拒絕。請至 iPhone『設定』>『通知』中重新開啟。");
+                }
+            });
+        }
     }
 
     function startReminderCheck() {
@@ -204,13 +212,120 @@
         const today = getTodayKey();
         const m = JSON.parse(localStorage.getItem('m_list') || '[]');
         if (!m.some(l => l.date === today && l.timeSlot.startsWith(prefix)) && Notification.permission === "granted") {
-            new Notification("💊 藥物記錄提醒", { body: `已經過了 ${prefix}，記得記錄您的藥物喔！`, requireInteraction: true });
+            new Notification("💊 藥物記錄提醒", { body: `已經過了 ${prefix}，還沒看到您的服藥紀錄喔！`, requireInteraction: true });
         }
     }
 
-    // 3. CORE LOGIC
-    function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
+    // 3. CORE UI & LOGIC
+    function updateUI() {
+        const todayKey = getTodayKey();
+        const s = calculateDayScore(todayKey);
+        const summaryDiv = document.getElementById('yesterdaySummary');
+        const now = new Date();
+        const curHour = now.getHours();
+        const curMin = now.getMinutes();
 
+        // Greeting/Summary Logic (12pm switch)
+        let feedbackContent = "";
+        if (curHour < 12) {
+            const yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
+            const yKey = `${yDate.getFullYear()}-${(yDate.getMonth() + 1).toString().padStart(2, '0')}-${yDate.getDate().toString().padStart(2, '0')}`;
+            const yS = calculateDayScore(yKey);
+            if (!yS.hasData) feedbackContent = "今天是新的一天！💪";
+            else if (yS.score === 3) feedbackContent = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
+            else feedbackContent = `昨天你沒有拿到所有的 ✅！<br><b>注意：</b>${yS.reasons.join('、')}。繼續加油！💪`;
+        } else {
+            feedbackContent = "今天是新的一天，加油填寫你的紀錄！💪";
+        }
+
+        // Dark Orange Med Alerts
+        const checkSlots = [
+            { label: '08:00 (早上)', hour: 8 }, { label: '12:00 (中午)', hour: 12 },
+            { label: '20:00 (晚上)', hour: 20 }, { label: '22:00 (睡覺前)', hour: 22 }
+        ];
+        let missed = checkSlots.filter(slot => curHour > slot.hour || (curHour === slot.hour && curMin >= 5)) 
+                               .filter(slot => !s.m.some(log => log.timeSlot === slot.label)).map(slot => slot.label);
+        if (missed.length > 0) {
+            feedbackContent += `<div style="color: #e67e22; margin-top: 8px; font-weight: bold;">⚠️ 注意：暫時沒有 ${missed.join(' 和 ')} 的藥物紀錄 💊，請記得定時吃藥，好好關注自己的身心健康！</div>`;
+        }
+        summaryDiv.innerHTML = feedbackContent;
+
+        // Fluid & Meds UI
+        document.getElementById('curTotal').innerText = s.fSum;
+        const bar = document.getElementById('progressBar');
+        bar.style.width = Math.min((s.fSum / 800) * 100, 100) + '%';
+        if (s.fSum > 800) { bar.classList.add('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'block'; }
+        else { bar.classList.remove('over-limit'); document.getElementById('fluidLimitMsg').style.display = 'none'; }
+        
+        const btns = document.getElementsByClassName('med-btn');
+        MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x => x.timeSlot === t) ? "med-btn taken" : "med-btn");
+        
+        const b = (logs, k) => logs.map(x => `
+            <div class="entry-log-item">
+                <div style="display:flex; justify-content:space-between; align-items: flex-start;">
+                    <div>[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt ? x.amt + 'mL' : ''} @${x.location || '未註明'}${x.comment ? `<div class="medical-comment">${x.comment}</div>` : ''}</div>
+                    <div style="display:flex; gap:5px; margin-left:10px;">
+                        <button onclick="editItem('${k}', ${x.id})" style="background:#f1c40f; color:black; padding:4px 8px; font-size:10px; width:auto; margin:0;">修改</button> 
+                        <button onclick="deleteItem('${k}', ${x.id})" style="background:#e74c3c; color:white; padding:4px 8px; font-size:10px; width:auto; margin:0;">刪除</button>
+                    </div>
+                </div>
+            </div>`).join('');
+        document.getElementById('dailyFluidList').innerHTML = b(s.f, 'f_logs');
+        document.getElementById('dailyFoodList').innerHTML = b(s.d, 'd_logs');
+        document.getElementById('dailyMedList').innerHTML = b(s.m, 'm_list');
+    }
+
+    // 4. DATA ACTIONS (CRUD)
+    function addFood() {
+        const n = document.getElementById('foodName').value; if(!n) return;
+        const c = (function(f){
+            let r = []; if (HIGH_PHOS_KEYWORDS.some(k=>f.includes(k)) || f.includes("加工") || f.includes("火腿") || f.includes("香腸")) { r.push("⛔<br>注意高磷食物！<br>請先跟註冊營養師或醫生商量你的餐飲選擇"); }
+            return r.join("");
+        })(n);
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⛔"), location: getSelectedLocation() };
+        let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
+        document.getElementById('foodName').value = ''; updateUI();
+    }
+
+    function addFluid() {
+        const a = parseInt(document.getElementById('fluidAmt').value); if(!a) return;
+        const type = document.getElementById('fluidType').value;
+        const note = document.getElementById('fluidNote').value;
+        const label = (type === '其他' && note) ? `其他(${note})` : type;
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt: a, label, location: getSelectedLocation() };
+        let l = JSON.parse(localStorage.getItem('f_logs') || '[]'); l.unshift(entry); localStorage.setItem('f_logs', JSON.stringify(l));
+        document.getElementById('fluidAmt').value = ''; document.getElementById('fluidNote').value = ''; updateUI();
+    }
+
+    function toggleMed(slot) {
+        let l = JSON.parse(localStorage.getItem('m_list') || '[]'); const today = getTodayKey();
+        const ex = l.find(x => x.date === today && x.timeSlot === slot);
+        if (ex) { if(confirm("取消記錄？")) l = l.filter(x => x !== ex); }
+        else { l.unshift({ id: Date.now(), date: today, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), timeSlot: slot, location: getSelectedLocation() }); }
+        localStorage.setItem('m_list', JSON.stringify(l)); updateUI();
+    }
+
+    function editItem(k, id) {
+        let logs = JSON.parse(localStorage.getItem(k) || '[]'); let item = logs.find(l => l.id === id);
+        if (k === 'f_logs') { let a = prompt("修改mL:", item.amt); if(a) item.amt = parseInt(a); }
+        else if (k === 'd_logs') { let n = prompt("修改食物:", item.name); if(n) item.name = n; }
+        let locMsg = "請選擇新位置號碼：\n" + LOC_OPTIONS.map((o, i) => `${i+1}. ${o}`).join("\n");
+        let locIdx = prompt(locMsg, "1");
+        if (locIdx && LOC_OPTIONS[locIdx-1]) {
+            item.location = LOC_OPTIONS[locIdx-1];
+            if (item.location === "其他") { let det = prompt("註明細節:"); if (det) item.location = `其他(${det})`; }
+        }
+        localStorage.setItem(k, JSON.stringify(logs)); updateUI();
+    }
+
+    function deleteItem(k, id) { if(confirm("刪除？")) { let logs = JSON.parse(localStorage.getItem(k) || '[]'); localStorage.setItem(k, JSON.stringify(logs.filter(l => l.id !== id))); updateUI(); } }
+
+    // 5. HELPERS
+    function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
+    function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
+    function toggleFluidNote() { document.getElementById('fluidNote').style.display = (document.getElementById('fluidType').value === '其他') ? 'block' : 'none'; }
+    function getSelectedLocation() { const main = document.getElementById('userLocation').value; const det = document.getElementById('locDetail').value; return (main === '其他' && det) ? `其他(${det})` : main; }
+    
     function calculateDayScore(dateKey) {
         const f = JSON.parse(localStorage.getItem('f_logs') || '[]').filter(l => l.date === dateKey);
         const d = JSON.parse(localStorage.getItem('d_logs') || '[]').filter(l => l.date === dateKey);
@@ -228,136 +343,12 @@
         return { score, color, reasons, hasData, f, d, m, fSum, mOk, fOk, dOk };
     }
 
-    function addFood() {
-        const n = document.getElementById('foodName').value; if(!n) return;
-        const comment = (function(f){
-            let r = []; if (HIGH_PHOS_KEYWORDS.some(k=>f.includes(k)) || f.includes("加工") || f.includes("火腿") || f.includes("香腸")) { r.push("⛔<br>注意高磷食物！<br>請先跟註冊營養師或醫生商量你的餐飲選擇"); }
-            return r.join("");
-        })(n);
-        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment, risk: comment.includes("⛔"), location: getSelectedLocation() };
-        let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
-        document.getElementById('foodName').value = ''; updateUI();
+    function showTab(id, btn) {
+        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active'); btn.classList.add('active');
+        if(id === 'calendarTab') renderMultiMonthCalendar();
+        if(id === 'history') renderHistoryTable();
     }
-
-    function addFluid() {
-        const a = parseInt(document.getElementById('fluidAmt').value); if(!a) return;
-        const type = document.getElementById('fluidType').value;
-        const note = document.getElementById('fluidNote').value;
-        const label = (type === '其他' && note) ? `其他(${note})` : type;
-        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt: a, label, location: getSelectedLocation() };
-        let l = JSON.parse(localStorage.getItem('f_logs') || '[]'); l.unshift(entry); localStorage.setItem('f_logs', JSON.stringify(l));
-        document.getElementById('fluidAmt').value = ''; document.getElementById('fluidNote').value = ''; updateUI();
-    }
-
-    // --- Intelligent Medication Alert (NEW) ---
-        // --- Combined Feedback Logic ---
-    function updateUI() {
-        const todayKey = getTodayKey();
-        const s = calculateDayScore(todayKey);
-        const summaryDiv = document.getElementById('yesterdaySummary');
-        
-        const now = new Date();
-        const curHour = now.getHours();
-        const curMin = now.getMinutes();
-
-        // --- 1. DETERMINE GREETING/SUMMARY TEXT ---
-        let feedbackContent = "";
-        
-        if (curHour < 12) {
-            // MORNING: Show Yesterday's Progress
-            const yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
-            const yKey = `${yDate.getFullYear()}-${(yDate.getMonth() + 1).toString().padStart(2, '0')}-${yDate.getDate().toString().padStart(2, '0')}`;
-            const yStatus = calculateDayScore(yKey);
-
-            if (!yStatus.hasData) {
-                feedbackContent = "今天是新的一天！💪";
-            } else if (yStatus.score === 3) {
-                feedbackContent = "🌟 昨天你做得很好，在三個範疇都成功拿到了 ✅！今天你都可以做得到的。";
-            } else {
-                feedbackContent = `昨天你沒有拿到所有的 ✅！<br><b>注意：</b>${yStatus.reasons.join('、')}。繼續加油！💪`;
-            }
-        } else {
-            // AFTERNOON (12pm onwards): Focus purely on Today
-            feedbackContent = "今天是新的一天，加油填寫你的紀錄！💪";
-        }
-
-        // --- 2. ADD MEDICATION ALERTS (IN DARK ORANGE) ---
-        const checkSlots = [
-            { label: '08:00 (早上)', hour: 8 },
-            { label: '12:00 (中午)', hour: 12 },
-            { label: '20:00 (晚上)', hour: 20 },
-            { label: '22:00 (睡覺前)', hour: 22 }
-        ];
-
-        let missed = checkSlots
-            .filter(slot => curHour > slot.hour || (curHour === slot.hour && curMin >= 5)) 
-            .filter(slot => !s.m.some(log => log.timeSlot === slot.label))
-            .map(slot => slot.label);
-
-        if (missed.length > 0) {
-            feedbackContent += `<div style="color: #e67e22; margin-top: 8px; font-weight: bold;">⚠️ 注意：暫時沒有 ${missed.join(' 和 ')} 的藥物紀錄 💊，請記得定時吃藥，好好關注自己的身心健康！</div>`;
-        }
-
-        summaryDiv.innerHTML = feedbackContent;
-
-        // --- 3. RE-BUILD LISTS & PROGRESS BAR ---
-        document.getElementById('curTotal').innerText = s.fSum;
-        const bar = document.getElementById('progressBar');
-        bar.style.width = Math.min((s.fSum / 800) * 100, 100) + '%';
-        
-        if (s.fSum > 800) { 
-            bar.classList.add('over-limit'); 
-            document.getElementById('fluidLimitMsg').style.display = 'block'; 
-        } else { 
-            bar.classList.remove('over-limit'); 
-            document.getElementById('fluidLimitMsg').style.display = 'none'; 
-        }
-        
-        const btns = document.getElementsByClassName('med-btn');
-        MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x => x.timeSlot === t) ? "med-btn taken" : "med-btn");
-        
-        const b = (logs, k) => logs.map(x => `
-            <div class="entry-log-item">
-                <div style="display:flex; justify-content:space-between; align-items: flex-start;">
-                    <div>[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt ? x.amt + 'mL' : ''} @${x.location || '未註明'}${x.comment ? `<div class="medical-comment">${x.comment}</div>` : ''}</div>
-                    <div style="display:flex; gap:5px; margin-left:10px;">
-                        <button onclick="editItem('${k}', ${x.id})" style="background:#f1c40f; color:black; padding:4px 8px; font-size:10px; width:auto; margin:0;">修改</button> 
-                        <button onclick="deleteItem('${k}', ${x.id})" style="background:#e74c3c; color:white; padding:4px 8px; font-size:10px; width:auto; margin:0;">刪除</button>
-                    </div>
-                </div>
-            </div>`).join('');
-            
-        document.getElementById('dailyFluidList').innerHTML = b(s.f, 'f_logs');
-        document.getElementById('dailyFoodList').innerHTML = b(s.d, 'd_logs');
-        document.getElementById('dailyMedList').innerHTML = b(s.m, 'm_list');
-    }
-
-    function editItem(k, id) {
-        let logs = JSON.parse(localStorage.getItem(k) || '[]'); let item = logs.find(l => l.id === id);
-        if (k === 'f_logs') { let a = prompt("修改mL:", item.amt); if(a) item.amt = parseInt(a); }
-        else if (k === 'd_logs') { let n = prompt("修改食物:", item.name); if(n) item.name = n; }
-        
-        // Location Dropdown Mock
-        let locMsg = "請選擇新位置的號碼：\n" + LOC_OPTIONS.map((o, i) => `${i+1}. ${o}`).join("\n");
-        let locIdx = prompt(locMsg, "1");
-        if (locIdx && LOC_OPTIONS[locIdx-1]) {
-            item.location = LOC_OPTIONS[locIdx-1];
-            if (item.location === "其他") {
-                let det = prompt("請註明地點細節:");
-                if (det) item.location = `其他(${det})`;
-            }
-        }
-        localStorage.setItem(k, JSON.stringify(logs)); updateUI();
-    }
-
-    function deleteItem(k, id) { if(confirm("刪除？")) { let logs = JSON.parse(localStorage.getItem(k) || '[]'); localStorage.setItem(k, JSON.stringify(logs.filter(l => l.id !== id))); updateUI(); } }
-    function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
-    function getSelectedLocation() { 
-        const main = document.getElementById('userLocation').value;
-        const det = document.getElementById('locDetail').value;
-        return (main === '其他' && det) ? `其他(${det})` : main;
-    }
-    function showTab(id, btn) { document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); if(id === 'calendarTab') renderMultiMonthCalendar(); if(id === 'history') renderHistoryTable(); }
 
     function renderMultiMonthCalendar() {
         const c = document.getElementById('multiMonthCalendarContainer'); c.innerHTML = '';
@@ -392,6 +383,7 @@
             <tr><td colspan="4"><div id="det-${id}" class="details-box">藥物: ${s.m.map(x=>x.timeSlot).join(', ') || '無'}<br>飲水: ${s.fSum}mL<br>飲食: ${s.d.map(x=>x.name).join(', ')}</div></td></tr>`;
         }).join('');
     }
+
     function exportToPDF(thisMonthOnly) { window.print(); }
 </script>
 </body>

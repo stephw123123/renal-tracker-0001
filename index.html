@@ -167,33 +167,31 @@
 
     // 2. NOTIFICATION SETUP (Force Success Fix + 10-Sec Test)
     function setupNotifications() {
-        if (!("Notification" in window)) {
-            alert("此設備不支援通知。請確保已『加入主畫面』並從桌面圖示開啟。");
+        if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+            alert("此設備不支援。請確保已『加入主畫面』並從桌面圖示開啟。");
             return;
         }
 
-        const runTest = () => {
-            alert("✅ 提醒功能已啟動！\n\n為了測試功能，系統將在 10 秒後發送一個測試提醒。\n\n請【現在立刻關閉 App 或鎖上螢幕】來測試接收。");
-            setTimeout(() => {
-                new Notification("✅ 測試成功！", { 
-                    body: "看到這個訊息，代表您的藥物提醒功能運作正常。我們會定時提醒您服藥喔！",
-                    requireInteraction: true 
-                });
-            }, 10000);
-            startReminderCheck();
-        };
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                alert("✅ 權限已開啟！\n\n系統將在 10 秒後發送測試提醒。\n\n請【現在立刻鎖上螢幕】。");
+                
+                // Use the Service Worker to bypass the "Sleep" mode
+                setTimeout(() => {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.active.postMessage({
+                            type: 'SHOW_NOTIFICATION',
+                            title: '✅ 測試成功！',
+                            body: '提醒功能運作正常。我們會定時提醒您服藥喔！'
+                        });
+                    });
+                }, 10000);
 
-        if (Notification.permission === "granted") {
-            runTest(); // If already allowed, just run the test
-        } else {
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    runTest();
-                } else if (permission === "denied") {
-                    alert("❌ 通知權限被拒絕。請至 iPhone『設定』>『通知』中重新開啟。");
-                }
-            });
-        }
+                startReminderCheck();
+            } else if (permission === "denied") {
+                alert("❌ 權限被拒絕。請至 iPhone『設定』>『通知』重新開啟。");
+            }
+        });
     }
 
     function startReminderCheck() {

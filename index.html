@@ -331,7 +331,78 @@
         }).join('');
     }
 
-    function exportToPDF(thisMonthOnly) { window.print(); }
+    function exportToPDF(thisMonthOnly) {
+        const allLogs = [...JSON.parse(localStorage.getItem('f_logs')||'[]'), ...JSON.parse(localStorage.getItem('m_list')||'[]'), ...JSON.parse(localStorage.getItem('d_logs')||'[]')];
+        const dates = [...new Set(allLogs.map(l => l.date))].sort();
+        const win = window.open('', '', 'height=800,width=900');
+        
+        win.document.write(`<html><head><title>健康報告</title><style>
+            body { font-family: sans-serif; padding: 30px; line-height:1.5; color:#333; }
+            h1, h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 30px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+            .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
+            .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: #eee; border: 1px solid #ddd; }
+            .cal-day { font-size: 0.8rem; padding: 5px 2px; border: 1px solid #f0f0f0; min-height: 60px; display: flex; flex-direction: column; align-items: center; background:#fff; }
+            .cal-header { font-weight: bold; background: #f1f2f6; min-height: 20px; font-size: 0.7rem; }
+            .cal-dot { width: 15px; height: 15px; border-radius: 50%; margin: 4px 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .cal-note { font-size: 7px; color: #666; text-align: center; line-height: 1; }
+            .day-block { margin-top: 20px; page-break-inside: avoid; border-top: 1px solid #eee; padding-top: 10px; font-size: 13px; }
+        </style></head><body>
+            <h1>腎臟健康進度報告 (${thisMonthOnly ? '本月' : '全部'})</h1>
+            
+            <h2>1. 指標摘要 (✅=達標)</h2>
+            ${document.getElementById('historyTable').outerHTML}
+            
+            <div style="page-break-before: always;"></div>
+            <h2>2. 視覺月曆回顧</h2>
+            <div id="pdf-cal-view"></div>
+            
+            <div style="page-break-before: always;"></div>
+            <h2>3. 詳細記錄細目</h2>`);
+
+        // Re-generate the visual calendar for the PDF
+        const pdfCal = win.document.getElementById('pdf-cal-view');
+        const months = [...new Set(allLogs.map(l => l.date.substring(0, 7)))].sort().reverse();
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}`;
+        
+        const monthsToDisplay = thisMonthOnly ? [currentMonth] : months;
+
+        monthsToDisplay.forEach(mKey => {
+            const [y, m] = mKey.split('-').map(Number);
+            let gHtml = `<div class="cal-month-header">${y} 年 ${m} 月</div><div class="cal-grid">`;
+            ["日","一","二","三","四","五","六"].forEach(w => gHtml += `<div class="cal-day cal-header">${w}</div>`);
+            
+            const first = new Date(y, m-1, 1).getDay();
+            const total = new Date(y, m, 0).getDate();
+            for(let i=0; i<first; i++) gHtml += `<div class="cal-day" style="background:#f9f9f9"></div>`;
+            for(let d=1; d<=total; d++) {
+                const dk = `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+                const s = calculateDayScore(dk);
+                gHtml += `<div class="cal-day"><div>${d}</div>${s.hasData ? `<div class="cal-dot" style="background:${s.color}"></div><div class="cal-note">${s.reasons.join('<br>')}</div>` : ''}</div>`;
+            }
+            pdfCal.innerHTML += gHtml + `</div>`;
+        });
+
+        // Add Daily Details
+        const filteredDates = thisMonthOnly ? dates.filter(d => d.startsWith(currentMonth)) : dates;
+        filteredDates.reverse().forEach(d => {
+            const s = calculateDayScore(d);
+            if(s.hasData) {
+                win.document.write(`<div class="day-block">
+                    <h3>日期: ${d}</h3>
+                    <p>💊 藥物: ${s.m.map(x=>`[${x.time}] ${x.timeSlot}`).join(', ') || '無'}</p>
+                    <p>💧 飲水: ${s.fSum}mL</p>
+                    <p>🥗 飲食: ${s.d.map(x=>`${x.name} ${x.comment?'('+x.comment+')':''}`).join('; ') || '無'}</p>
+                </div>`);
+            }
+        });
+
+        win.document.write(`</body></html>`);
+        win.document.close();
+        setTimeout(() => win.print(), 800);
+    }
 </script>
 </body>
 </html>

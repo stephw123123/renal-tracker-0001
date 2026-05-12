@@ -176,15 +176,29 @@
 
     // 2. NOTIFICATION LOGIC
     function setupNotifications() {
+        // Step 1: Check if the browser even has the feature
         if (!("Notification" in window)) {
-            alert("此設備不支援通知。請確保已『加入主畫面』並從桌面圖示開啟。");
+            alert("此設備不支援通知。請確保您是從『主畫面圖示』開啟，而非 Safari 瀏覽器。");
             return;
         }
+
+        // Step 2: Request permission
         Notification.requestPermission().then(permission => {
             if (permission === "granted") {
-                new Notification("✅ 提醒功能已啟動", { body: "系統將於 08:05, 12:05, 20:05, 22:05 檢查藥物紀錄。" });
+                // This is the "Test" to prove it works
+                const testNotify = new Notification("✅ 提醒已啟動", {
+                    body: "藥物提醒功能現已生效！",
+                    icon: "https://github.io"
+                });
+                alert("太好了！提醒功能已成功開啟。");
                 startReminderCheck();
+            } else if (permission === "denied") {
+                alert("通知權限被拒絕。請至 iPhone『設定』>『通知』>『健康日誌』中手動開啟。");
+            } else {
+                alert("未獲得授權，請再試一次。");
             }
+        }).catch(err => {
+            alert("發生錯誤：" + err);
         });
     }
 

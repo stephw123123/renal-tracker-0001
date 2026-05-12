@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的健康日誌</title>
-    <!-- Add Manifest for iOS Notification Support -->
-    <link rel="manifest" href="manifest.json">
     <style>
         body { font-family: -apple-system, sans-serif; background: #f4f7f9; padding: 15px; margin: 0; color: #2c3e50; }
         .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #eee; position: relative; }
@@ -19,6 +17,8 @@
         .tab-btn.active { background: #3498db; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .pdf-btn-group { display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; }
+        .pdf-btn-group button { width: 48% !important; flex: none; font-size: 0.8rem; padding: 10px 5px; font-weight: bold; margin-top: 0; }
         .notify-banner { background: #fffde7; border: 1px solid #fff59d; padding: 10px; border-radius: 10px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; }
         .btn-notify { background: #fbc02d; color: #333; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
@@ -31,33 +31,15 @@
         .med-btn.taken { background: #27ae60; color: white; border-color: #27ae60; }
         .entry-log-item { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; margin-bottom: 5px; font-size: 0.85rem; }
         .medical-comment { font-size: 0.8rem; color: #e67e22; background: #fff9f0; padding: 8px; border-radius: 5px; margin-top: 5px; border-left: 3px solid #f39c12; }
+        .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+        .cal-day { font-size: 0.9rem; padding: 5px 2px; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; background:#fff; }
+        .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; border: 1px solid rgba(0,0,0,0.1); }
         #pinOverlay { position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; font-size: 0.85rem; }
         th, td { padding: 10px 5px; border-bottom: 1px solid #eee; text-align: center; }
         .details-box { display: none; background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 5px; font-size: 0.85rem; text-align: left; border: 1px solid #ddd; line-height: 1.6; }
-        .view-btn { background: #ecf0f1; color: #2c3e50; padding: 5px 8px; font-size: 0.75rem; border: 1px solid #bdc3c7; width: auto; display: inline-block; margin-top: 4px; }
-        .cal-month-header { text-align: center; font-weight: bold; padding: 10px; background: #3498db; color: white; border-radius: 8px; margin: 20px 0 10px; }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-        .cal-day { font-size: 0.9rem; padding: 5px 2px; border: 1px solid #f0f0f0; min-height: 65px; display: flex; flex-direction: column; align-items: center; background:#fff; }
-        .cal-dot { width: 20px; height: 20px; border-radius: 50%; margin: 4px 0; -webkit-print-color-adjust: exact; }
-        .cal-note { font-size: 0.55rem; color: #666; text-align: center; }
-
-        .pdf-btn-group { 
-            display: flex; 
-            gap: 10px; 
-            margin-bottom: 15px; 
-            justify-content: center; 
-        }
-        
-        .pdf-btn-group button { 
-            width: 48%; 
-            flex: none; 
-            font-size: 0.8rem; 
-            padding: 10px 5px; 
-            font-weight: bold; 
-            margin-top: 0; 
-        }
-                
+        .view-btn { background: #ecf0f1; color: #2c3e50; padding: 5px 8px; font-size: 0.75rem; border: 1px solid #bdc3c7; width: auto; display: inline-block; }
     </style>
 </head>
 <body>
@@ -71,11 +53,11 @@
 
 <div id="mainApp" style="display:none;">
     <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
-    <div id="yesterdaySummary" class="summary-msg">正在分析昨日進度...</div>
+    <div id="yesterdaySummary" class="summary-msg">正在分析今日進度...</div>
 
     <div class="notify-banner">
-        🔔 想在用藥時間收到提醒嗎？<br>
-        <button class="btn-notify" onclick="setupNotifications()">開啟提醒功能</button>
+        🔔 想定時收到用藥提醒嗎？<br>
+        <button class="btn-notify" onclick="setupNotifications()">設定提醒教學</button>
     </div>
 
     <div class="tabs">
@@ -121,8 +103,12 @@
             <div id="fluidLimitMsg" class="fluid-warn-msg">⚠️ 飲水量已超標，明天要多加注意喔！</div>
             <div style="display:flex; gap:5px;">
                 <input type="number" id="fluidAmt" placeholder="mL" style="width:150px;">
-                <select id="fluidType" style="flex-grow:1;"><option value="水">水</option><option value="其他">其他</option></select>
+                <select id="fluidType" style="flex-grow:1;" onchange="toggleFluidNote()">
+                    <option value="水">水</option>
+                    <option value="其他">其他</option>
+                </select>
             </div>
+            <input type="text" id="fluidNote" placeholder="請註明飲品 (例如：湯、茶)" style="display:none;">
             <button onclick="addFluid()" style="background:#1976d2;">新增記錄</button>
             <div id="dailyFluidList" style="margin-top:10px;"></div>
         </div>
@@ -155,49 +141,18 @@
     const HIGH_PHOS_KEYWORDS = ["奶", "乳酪", "起司", "芝士", "蛋黃", "內臟", "巧克力", "朱古力", "可樂", "咖啡", "堅果", "罐頭", "即食麵"];
     const HIGH_PRO_KEYWORDS = ["雞", "魚", "肉", "豬", "牛", "蝦", "蟹", "海鮮"];
 
-    // 1. PIN LOGIN & INITIAL LOAD
+    function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
+
+    // 1. PIN LOGIN
     document.getElementById('pinInput').addEventListener('input', (e) => {
         if (e.target.value === CONFIG.PIN) {
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             updateUI(); 
-            if (Notification.permission === "granted") startReminderCheck();
         }
     });
 
-    // 2. NOTIFICATION SETUP (Force Success Fix + 10-Sec Test)
-    function setupNotifications() {
-        const guideMsg = `🔔 如何設定服藥提醒：\n\n` +
-            `由於 iPhone 的隱私保護限制，建議你設定手機內建的『鬧鐘』以獲得最穩定的提醒：\n\n` +
-            `1. 打開手機『時鐘 (Clock)』App\n` +
-            `2. 設定 4 個鬧鐘：08:00, 12:00, 20:00, 22:00\n` +
-            `3. 將標籤命名為『填寫健康日誌』\n\n` +
-            `當你看到鬧鐘時，點擊桌面圖示進入，若漏填紀錄，上方會出現橘色警告提醒你服藥！`;
-        
-        alert(guideMsg);
-    }
-
-    function startReminderCheck() {
-        setInterval(() => {
-            const now = new Date();
-            const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-            const targetTimes = ["08:05", "12:05", "20:05", "22:05"];
-            if (targetTimes.includes(currentTime)) {
-                const slotMap = { "08:05": "08:00", "12:05": "12:00", "20:05": "20:00", "22:05": "22:00" };
-                checkAndNotify(slotMap[currentTime]);
-            }
-        }, 30000); 
-    }
-
-    function checkAndNotify(prefix) {
-        const today = getTodayKey();
-        const m = JSON.parse(localStorage.getItem('m_list') || '[]');
-        if (!m.some(l => l.date === today && l.timeSlot.startsWith(prefix)) && Notification.permission === "granted") {
-            new Notification("💊 藥物記錄提醒", { body: `已經過了 ${prefix}，還沒看到你的服藥紀錄喔！`, requireInteraction: true });
-        }
-    }
-
-    // 3. CORE UI & LOGIC
+    // 2. UI UPDATE & COMBINED ALERTS
     function updateUI() {
         const todayKey = getTodayKey();
         const s = calculateDayScore(todayKey);
@@ -206,7 +161,6 @@
         const curHour = now.getHours();
         const curMin = now.getMinutes();
 
-        // Greeting/Summary Logic (12pm switch)
         let feedbackContent = "";
         if (curHour < 12) {
             const yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
@@ -219,7 +173,6 @@
             feedbackContent = "今天是新的一天，加油填寫你的紀錄！💪";
         }
 
-        // Dark Orange Med Alerts
         const checkSlots = [
             { label: '08:00 (早上)', hour: 8 }, { label: '12:00 (中午)', hour: 12 },
             { label: '20:00 (晚上)', hour: 20 }, { label: '22:00 (睡覺前)', hour: 22 }
@@ -227,11 +180,10 @@
         let missed = checkSlots.filter(slot => curHour > slot.hour || (curHour === slot.hour && curMin >= 5)) 
                                .filter(slot => !s.m.some(log => log.timeSlot === slot.label)).map(slot => slot.label);
         if (missed.length > 0) {
-            feedbackContent += `<div style="color: #e67e22; margin-top: 8px; font-weight: bold;">⚠️ 注意：暫時沒有 ${missed.join(' 和 ')} 的藥物紀錄 💊，請記得定時吃藥，好好關注自己的身心健康！</div>`;
+            feedbackContent += `<div style="color: #e67e22; margin-top: 10px; font-weight: bold; border-top: 1px solid rgba(230, 126, 34, 0.2); padding-top: 8px;">⚠️ 注意：暫時沒有 ${missed.join(' 和 ')} 的藥物紀錄 💊，請記得定時吃藥，好好關注自己的身心健康！</div>`;
         }
         summaryDiv.innerHTML = feedbackContent;
 
-        // Fluid & Meds UI
         document.getElementById('curTotal').innerText = s.fSum;
         const bar = document.getElementById('progressBar');
         bar.style.width = Math.min((s.fSum / 800) * 100, 100) + '%';
@@ -241,9 +193,9 @@
         const btns = document.getElementsByClassName('med-btn');
         MED_SLOTS.forEach((t, i) => btns[i].className = s.m.some(x => x.timeSlot === t) ? "med-btn taken" : "med-btn");
         
-        const b = (logs, k) => logs.map(x => `
+        const builder = (logs, k) => logs.map(x => `
             <div class="entry-log-item">
-                <div style="display:flex; justify-content:space-between; align-items: flex-start;">
+                <div style="display:flex; justify-content:space-between;">
                     <div>[${x.time}] ${x.name || x.label || x.timeSlot} ${x.amt ? x.amt + 'mL' : ''} @${x.location || '未註明'}${x.comment ? `<div class="medical-comment">${x.comment}</div>` : ''}</div>
                     <div style="display:flex; gap:5px; margin-left:10px;">
                         <button onclick="editItem('${k}', ${x.id})" style="background:#f1c40f; color:black; padding:4px 8px; font-size:10px; width:auto; margin:0;">修改</button> 
@@ -251,19 +203,19 @@
                     </div>
                 </div>
             </div>`).join('');
-        document.getElementById('dailyFluidList').innerHTML = b(s.f, 'f_logs');
-        document.getElementById('dailyFoodList').innerHTML = b(s.d, 'd_logs');
-        document.getElementById('dailyMedList').innerHTML = b(s.m, 'm_list');
+        document.getElementById('dailyFluidList').innerHTML = builder(s.f, 'f_logs');
+        document.getElementById('dailyFoodList').innerHTML = builder(s.d, 'd_logs');
+        document.getElementById('dailyMedList').innerHTML = builder(s.m, 'm_list');
     }
 
-    // 4. DATA ACTIONS (CRUD)
+    // 3. ACTIONS
     function addFood() {
         const n = document.getElementById('foodName').value; if(!n) return;
-        const c = (function(f){
+        const comment = (function(f){
             let r = []; if (HIGH_PHOS_KEYWORDS.some(k=>f.includes(k)) || f.includes("加工") || f.includes("火腿") || f.includes("香腸")) { r.push("⛔<br>注意高磷食物！<br>請先跟註冊營養師或醫生商量你的餐飲選擇"); }
             return r.join("");
         })(n);
-        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment: c, risk: c.includes("⛔"), location: getSelectedLocation() };
+        const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), name: n, comment, risk: comment.includes("⛔"), location: getSelectedLocation() };
         let l = JSON.parse(localStorage.getItem('d_logs') || '[]'); l.unshift(entry); localStorage.setItem('d_logs', JSON.stringify(l));
         document.getElementById('foodName').value = ''; updateUI();
     }
@@ -275,7 +227,9 @@
         const label = (type === '其他' && note) ? `其他(${note})` : type;
         const entry = { id: Date.now(), date: getTodayKey(), time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), amt: a, label, location: getSelectedLocation() };
         let l = JSON.parse(localStorage.getItem('f_logs') || '[]'); l.unshift(entry); localStorage.setItem('f_logs', JSON.stringify(l));
-        document.getElementById('fluidAmt').value = ''; document.getElementById('fluidNote').value = ''; updateUI();
+        document.getElementById('fluidAmt').value = ''; document.getElementById('fluidNote').value = ''; 
+        document.getElementById('fluidNote').style.display = 'none'; document.getElementById('fluidType').value = '水';
+        updateUI();
     }
 
     function toggleMed(slot) {
@@ -301,8 +255,11 @@
 
     function deleteItem(k, id) { if(confirm("刪除？")) { let logs = JSON.parse(localStorage.getItem(k) || '[]'); localStorage.setItem(k, JSON.stringify(logs.filter(l => l.id !== id))); updateUI(); } }
 
-    // 5. HELPERS
-    function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
+    function setupNotifications() {
+        alert("🔔 如何設定用藥提醒：\n\n由於 iPhone 的隱私保護限制，建議你設定手機內建的『鬧鐘』以獲得最穩定的提醒：\n\n1. 打開手機『時鐘』App\n2. 設定 4 個鬧鐘：08:00, 12:00, 20:00, 22:00\n3. 將標籤命名為『填寫健康日誌』\n\n當你看到鬧鐘時，點擊桌面圖示進入，若漏填紀錄，上方會出現橘色警告提醒你。");
+    }
+
+    // 4. HELPERS & PRINT
     function toggleLocDetail() { document.getElementById('locDetail').style.display = (document.getElementById('userLocation').value === '其他') ? 'block' : 'none'; }
     function toggleFluidNote() { document.getElementById('fluidNote').style.display = (document.getElementById('fluidType').value === '其他') ? 'block' : 'none'; }
     function getSelectedLocation() { const main = document.getElementById('userLocation').value; const det = document.getElementById('locDetail').value; return (main === '其他' && det) ? `其他(${det})` : main; }
@@ -314,7 +271,7 @@
         const fSum = f.reduce((s, l) => s + l.amt, 0);
         const mOk = MED_SLOTS.every(slot => m.map(x=>x.timeSlot).includes(slot));
         const fOk = fSum <= 800 && f.length > 0;
-        const dOk = d.length > 0 && !d.some(l => l.risk);
+        const dOk = d.length > 0 && !d.some(l => l.comment.includes("⛔"));
         const hasData = f.length > 0 || d.length > 0 || m.length > 0;
         let score = 0, reasons = [];
         if (mOk) score++; else if(hasData) reasons.push("藥物未齊 😥");

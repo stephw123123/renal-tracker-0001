@@ -64,13 +64,15 @@
 </head>
 <body>
 
-<div id="pinOverlay">
-    <div class="card" style="width: 280px; text-align: center;">
+<div id="pinOverlay" style="position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000;">
+    <div class="card" style="width: 280px; text-align: center; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
         <h3>我的健康日誌 - 解鎖 📝🔓</h3>
-        <input type="password" id="pinInput" maxlength="4" placeholder="輸入 PIN" inputmode="numeric" style="text-align:center; font-size: 20px;">
+        <input type="password" id="pinInput" maxlength="4" placeholder="輸入 4 位 PIN" inputmode="numeric" style="text-align:center; font-size: 20px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+        <!-- Clean Explicit Submission Button -->
+        <button id="loginBtn" onclick="processLoginManual()" style="background: #3498db; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 16px;">登入</button>
     </div>
 </div>
-
+    
 <div id="mainApp" style="display:none;">
     <div class="welcome-msg">歡迎登錄你的健康日誌！</div>
     <div id="yesterdaySummary" class="summary-msg">正在分析今日進度...</div>
@@ -165,38 +167,50 @@
 
     function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
 
-    // Optimized PIN LOGIN with Bot Fixes + Browser Rendering Tweak
-    document.addEventListener('DOMContentLoaded', function() {
-        const pinInput = document.getElementById('pinInput');
-        if (!pinInput) {
-            console.error("PIN input element not found");
+    // 1. ISOLATED MANUAL SUBMISSION PORTAL
+    function processLoginManual() {
+        const pinField = document.getElementById('pinInput');
+        if (!pinField) {
+            alert("系統錯誤：找不到輸入欄位。");
             return;
         }
-        
-        pinInput.addEventListener('input', (e) => {
-            if (e.target.value === CONFIG.PIN) {
-                const overlay = document.getElementById('pinOverlay');
-                const mainApp = document.getElementById('mainApp');
-                
-                // 1. FORCE UNLOCK THE SCREEN IMMEDIATELY
-                if (overlay) overlay.style.display = 'none';
-                if (mainApp) mainApp.style.display = 'block';
-                
-                // 2. USE A ZERO-DELAY TIMER TO RUN THE DASHBOARD SEPARATELY
-                // This guarantees the lock screen vanishes even if updateUI glitches!
-                setTimeout(() => {
-                    try {
-                        updateUI(); 
-                    } catch (err) {
-                        console.error("Error updating UI handled safely:", err);
-                        const summary = document.getElementById('yesterdaySummary');
-                        if (summary) summary.innerHTML = "歡迎回來！今天是新的一天，加油填寫你的紀錄！💪";
-                    }
-                }, 0); // 0ms delay breaks the browser execution queue safely
-            }
-        });
-    });
 
+        if (pinField.value === CONFIG.PIN) {
+            // STEP 1: Physically drop the block wall instantly
+            document.getElementById('pinOverlay').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            
+            // STEP 2: Isolate calculations entirely inside a zero-delay rendering loop
+            setTimeout(() => {
+                try {
+                    updateUI(); 
+                } catch (dashboardError) {
+                    console.error("Dashboard failed to match storage targets cleanly: ", dashboardError);
+                    // Fallback to guarantee the text box is descriptive
+                    const fallbackBox = document.getElementById('yesterdaySummary');
+                    if (fallbackBox) {
+                        fallbackBox.innerHTML = "歡迎回來！今天是新的一天，加油填寫你的紀錄！💪";
+                    }
+                }
+            }, 0);
+        } else {
+            alert("❌ PIN 碼不正確，請重新輸入！");
+            pinField.value = ""; // Erase bad input
+            pinField.focus();    // Auto-reset focus
+        }
+    }
+
+    // Optional: Allow pressing the keyboard's native "Enter" key to click the button automatically
+    document.addEventListener('DOMContentLoaded', function() {
+        const pinField = document.getElementById('pinInput');
+        if (pinField) {
+            pinField.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    processLoginManual();
+                }
+            });
+        }
+    });
     // 2. UI UPDATE & COMBINED ALERTS
     function updateUI() {
         const todayKey = getTodayKey();

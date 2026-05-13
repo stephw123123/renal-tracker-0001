@@ -26,8 +26,15 @@
         .tabs { display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; background: #eee; }
         .tab-btn { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; color: #444; }
         .tab-btn.active { background: #3498db; color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        /* Complete Screen Separation Rule */
+        .tab-content { 
+            display: none; 
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .tab-content.active { 
+            display: block !important; 
+        }
         .pdf-btn-group { display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; }
         .pdf-btn-group button { width: 48% !important; flex: none; font-size: 0.8rem; padding: 10px 5px; font-weight: bold; margin-top: 0; }
         .notify-banner { background: #fffde7; border: 1px solid #fff59d; padding: 10px; border-radius: 10px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; }

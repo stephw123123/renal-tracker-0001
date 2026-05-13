@@ -165,20 +165,18 @@
 
     function getTodayKey() { const d = new Date(); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
 
-    // 1. PIN LOGIN & INITIAL LOAD (FIXED)
+    
+    // 1. PIN LOGIN & INITIAL LOAD (SPECIFIC REPAIR)
     document.getElementById('pinInput').addEventListener('input', (e) => {
         if (e.target.value === CONFIG.PIN) {
-            // Force the login page to show IMMEDIATELY first
+            // Unlock the screen immediately
             document.getElementById('pinOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             
-            // Run the UI calculations safely inside a try-catch block
+            // Refresh your dashboard records safely
             try {
                 updateUI(); 
-                if (Notification.permission === "granted") startReminderCheck();
             } catch (err) {
-                console.error("UI Update Error: ", err);
-                // Fallback text if the date calculations glitch
                 document.getElementById('yesterdaySummary').innerHTML = "歡迎回來！今天是新的一天，加油填寫你的紀錄！💪";
             }
         }

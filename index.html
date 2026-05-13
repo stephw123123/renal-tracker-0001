@@ -23,17 +23,41 @@
         .fluid-section { background-color: #e3f2fd; border-left: 6px solid #2196f3; }
         .welcome-msg { color: #0d47a1; font-weight: bold; margin-bottom: 5px; font-size: 1.2rem; text-align: center; }
         .summary-msg { background: #fff; padding: 12px; border-radius: 10px; font-size: 0.95rem; margin-bottom: 20px; border-left: 4px solid #2196f3; color: #0d47a1; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .tabs { display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; background: #eee; }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: #eee; cursor: pointer; font-weight: bold; color: #444; }
-        .tab-btn.active { background: #3498db; color: white; }
-        /* Complete Screen Separation Rule */
+        /* Force Tabs to Be Completely Invisible When Inactive */
         .tab-content { 
-            display: none; 
+            display: none !important; 
+            visibility: hidden !important;
             width: 100%;
             box-sizing: border-box;
         }
+        
+        /* Force the Active Tab to Be the ONLY One Visible */
         .tab-content.active { 
             display: block !important; 
+            visibility: visible !important;
+        }
+
+        /* Clean Tab Buttons Grid Layout */
+        .tabs { 
+            display: flex; 
+            margin-bottom: 15px; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            border: 1px solid #ddd; 
+            background: #eee; 
+        }
+        .tab-btn { 
+            flex: 1; 
+            padding: 12px; 
+            border: none; 
+            background: #eee; 
+            cursor: pointer; 
+            font-weight: bold; 
+            color: #444; 
+        }
+        .tab-btn.active { 
+            background: #3498db !important; 
+            color: white !important; 
         }
         .pdf-btn-group { display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; }
         .pdf-btn-group button { width: 48% !important; flex: none; font-size: 0.8rem; padding: 10px 5px; font-weight: bold; margin-top: 0; }
@@ -70,12 +94,10 @@
     </style>
 </head>
 <body>
-
 <div id="pinOverlay" style="position: fixed; inset: 0; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 1000;">
     <div class="card" style="width: 280px; text-align: center; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
         <h3>我的健康日誌 - 解鎖 📝🔓</h3>
         <input type="password" id="pinInput" maxlength="4" placeholder="輸入 4 位 PIN" inputmode="numeric" style="text-align:center; font-size: 20px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 15px;">
-        <!-- Clean Explicit Submission Button -->
         <button id="loginBtn" onclick="processLoginManual()" style="background: #3498db; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 16px;">登入</button>
     </div>
 </div>
@@ -95,7 +117,9 @@
         <button class="tab-btn" onclick="showTab('calendarTab', this)">回顧月曆</button>
     </div>
 
-    <!-- 📍 Updated Location Card with Explicit Save Button -->
+    <!-- 📍 TAB 1: TODAY LOGS DASHBOARD (RESTORED WRAPPER BOX) -->
+    <div id="tracker" class="tab-content active">
+        <!-- 📍 Location Card -->
         <div class="card" style="border: 2px solid #3498db;">
             <h2 style="border:none;">📍 我現在在哪裡？</h2>
             <select id="userLocation" onchange="toggleLocDetail()">
@@ -106,10 +130,10 @@
                 <option value="其他">其他</option>
             </select>
             <input type="text" id="locDetail" placeholder="註明地點..." style="display:none; margin-bottom: 10px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 100%; box-sizing: border-box;">
-            <!-- New Explicit Location Confirmation Button -->
             <button onclick="confirmLocationUpdate()" style="background:#3498db; color:white; font-size: 0.9rem; padding: 10px; border-radius: 8px; font-weight: bold;">更新目前位置</button>
         </div>
 
+        <!-- 🥗 Food Card -->
         <div class="card food-section">
             <h2>🥗 食物紀錄</h2>
             <input type="text" id="foodName" placeholder="輸入食物">
@@ -117,6 +141,7 @@
             <div id="dailyFoodList" style="margin-top:10px;"></div>
         </div>
 
+        <!-- 💊 Medication Card -->
         <div class="card med-section">
             <h2>💊 藥物狀態記錄</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -128,6 +153,7 @@
             <div id="dailyMedList" style="margin-top:10px;"></div>
         </div>
 
+        <!-- 💧 Water Progress Card -->
         <div class="card fluid-section">
             <h2>💧 飲水進度 (<span id="curTotal">0</span>/800mL)</h2>
             <div class="progress-container"><div id="progressBar"></div></div>
@@ -143,16 +169,23 @@
             <button onclick="addFluid()" style="background:#1976d2;">新增記錄</button>
             <div id="dailyFluidList" style="margin-top:10px;"></div>
         </div>
-    </div>
+    </div> <!-- Clean end of Tab 1 -->
 
+    <!-- 📋 TAB 2: HISTORICAL RECORDS -->
     <div id="history" class="tab-content">
         <div class="pdf-btn-group">
             <button onclick="exportToPDF(true)" style="background:#2980b9;">下載本月 PDF</button>
             <button onclick="exportToPDF(false)" style="background:#34495e;">下載全部 PDF</button>
         </div>
-        <div class="card" style="padding:10px;"><table id="historyTable"><thead><tr><th style="width:35%">日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+        <div class="card" style="padding:10px;">
+            <table id="historyTable">
+                <thead><tr><th style="width:35%">日期</th><th>藥物</th><th>飲水</th><th>飲食</th></tr></thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
     </div>
 
+    <!-- 📅 TAB 3: VISUAL MONTHLY CALENDAR -->
     <div id="calendarTab" class="tab-content">
         <div class="pdf-btn-group">
             <button onclick="exportToPDF(true)" style="background:#2980b9;">下載本月 PDF</button>
@@ -161,9 +194,10 @@
         <div id="multiMonthCalendarContainer"></div>
     </div>
 
+    <!-- Bottom Controls (Now neatly bounded at the foot of mainApp) -->
     <button onclick="location.reload()" style="background:#34495e; margin-top:20px;">登出</button>
     <button style="background: #95a5a6; font-size: 12px; margin-top: 10px; border-radius: 8px; color: white; border: none; padding: 8px; width: 100%; margin-bottom: 50px;" onclick="if(confirm('確定要清除所有記錄嗎？')) { localStorage.clear(); alert('已清除'); location.reload(); }">🗑️ 清除所有資料</button>
-</div>
+</div> <!-- Safe closure of mainApp -->
 
 <script>
     const CONFIG = { LIMIT: 800, PIN: "1234" };

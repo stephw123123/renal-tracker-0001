@@ -377,11 +377,36 @@
         return { score, color, reasons, hasData, f, d, m, fSum, mOk, fOk, dOk };
     }
 
+    // --- REINFORCED TAB NAVIGATION ENGINE ---
     function showTab(id, btn) {
-        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); btn.classList.add('active');
-        if(id === 'calendarTab') renderMultiMonthCalendar();
-        if(id === 'history') renderHistoryTable();
+        // 1. Hide all tab content blocks completely
+        const contents = document.querySelectorAll('.tab-content');
+        contents.forEach(el => {
+            el.classList.remove('active');
+            el.style.display = 'none'; // Force hide to prevent bleeding onto Tab 1
+        });
+        
+        // 2. Remove active styles from all navigation headers
+        const buttons = document.querySelectorAll('.tab-btn');
+        buttons.forEach(el => el.classList.remove('active'));
+        
+        // 3. Reveal the target tab container safely
+        const targetTab = document.getElementById(id);
+        if (targetTab) {
+            targetTab.classList.add('active');
+            targetTab.style.display = 'block'; // Force block view layout
+        }
+        
+        // 4. Highlight the current clicked button header
+        if (btn) btn.classList.add('active');
+        
+        // 5. Safely call calculation redraw engines
+        try {
+            if (id === 'calendarTab') renderMultiMonthCalendar();
+            if (id === 'history') renderHistoryTable();
+        } catch (layoutErr) {
+            console.error("Tab redraw process isolated safely: ", layoutErr);
+        }
     }
 
     function renderMultiMonthCalendar() {

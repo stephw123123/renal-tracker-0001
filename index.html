@@ -244,9 +244,10 @@
                     </div>
                 </div>
             </div>`).join('');
-        document.getElementById('dailyFluidList').innerHTML = builder(s.f, 'f_logs');
-        document.getElementById('dailyFoodList').innerHTML = builder(s.d, 'd_logs');
-        document.getElementById('dailyMedList').innerHTML = builder(s.m, 'm_list');
+        // Safe fallback using || [] ensures the app never crashes on a clean database
+        document.getElementById('dailyFluidList').innerHTML = builder(s.f || [], 'f_logs');
+        document.getElementById('dailyFoodList').innerHTML = builder(s.d || [], 'd_logs');
+        document.getElementById('dailyMedList').innerHTML = builder(s.m || [], 'm_list');
     }
 
     // 3. ACTIONS

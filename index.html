@@ -249,7 +249,6 @@
         if (missed.length > 0) {
             feedbackContent += `<div style="color: #e67e22; margin-top: 10px; font-weight: bold; border-top: 1px solid rgba(230, 126, 34, 0.2); padding-top: 8px;">⚠️ 注意：暫時沒有 ${missed.join(' 和 ')} 的藥物紀錄 💊，請記得定時吃藥，好好關注自己的身心健康！</div>`;
         }
-        // Protected line prevents script from crashing when navigating tabs
         if (summaryDiv) {
             summaryDiv.innerHTML = feedbackContent;
         }
@@ -283,7 +282,7 @@
             }
         }
         
-        // --- 5. RENDER RECORDBLOCK TABLES ---
+        // --- 5. RENDER LOG TABLES SAFELY ---
         const builder = (logs, k) => (logs || []).map(x => `
             <div class="entry-log-item">
                 <div style="display:flex; justify-content:space-between; align-items: flex-start;">
@@ -295,11 +294,11 @@
                 </div>
             </div>`).join('');
             
-        if (document.getElementById('dailyFluidList')) document.getElementById('dailyFluidList').innerHTML = builder(s.f, 'f_logs');
-        if (document.getElementById('dailyFoodList')) document.getElementById('dailyFoodList').innerHTML = builder(s.d, 'd_logs');
-        if (document.getElementById('dailyMedList')) document.getElementById('dailyMedList').innerHTML = builder(s.m, 'm_list');
+        if (document.getElementById('dailyFluidList')) document.getElementById('dailyFluidList').innerHTML = builder(s.f || [], 'f_logs');
+        if (document.getElementById('dailyFoodList')) document.getElementById('dailyFoodList').innerHTML = builder(s.d || [], 'd_logs');
+        if (document.getElementById('dailyMedList')) document.getElementById('dailyMedList').innerHTML = builder(s.m || [], 'm_list');
     }
-
+    
     // 3. ACTIONS
     function addFood() {
         const n = document.getElementById('foodName').value; if(!n) return;
